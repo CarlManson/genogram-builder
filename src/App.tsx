@@ -45,6 +45,8 @@ const LS_PROJECTS_KEY = 'genogram-builder-projects-v1'
 const LS_ACTIVE_ID_KEY = 'genogram-builder-active-id-v1'
 const LS_SETTINGS_KEY = 'genogram-builder-settings'
 const LS_WELCOME_SEEN_KEY = 'genogram-builder-welcome-seen-v1'
+const LS_COFFEE_PROMPTED_KEY = 'genogram-builder-coffee-prompted-v1'
+const COFFEE_PROMPT_DELAY_MS = 20 * 60 * 1000
 
 interface DragGroup {
   nodeId: string
@@ -81,6 +83,22 @@ export default function App() {
   const [showSettings, setShowSettings] = useState(false)
   const [showProjects, setShowProjects] = useState(false)
   const [showCoffee, setShowCoffee] = useState(false)
+  const [coffeeIsPrompt, setCoffeeIsPrompt] = useState(false)
+
+  // Auto-open the coffee modal once after the user has spent COFFEE_PROMPT_DELAY_MS
+  // on the page. The localStorage flag prevents the prompt from re-firing on later
+  // visits. Manual opens via the toolbar button stay unaffected.
+  useEffect(() => {
+    try {
+      if (localStorage.getItem(LS_COFFEE_PROMPTED_KEY)) return
+    } catch { return }
+    const timer = setTimeout(() => {
+      try { localStorage.setItem(LS_COFFEE_PROMPTED_KEY, '1') } catch { /* ignore */ }
+      setCoffeeIsPrompt(true)
+      setShowCoffee(true)
+    }, COFFEE_PROMPT_DELAY_MS)
+    return () => clearTimeout(timer)
+  }, [])
   const [showWelcome, setShowWelcome] = useState<boolean>(() => {
     try { return !localStorage.getItem(LS_WELCOME_SEEN_KEY) } catch { return false }
   })
@@ -803,7 +821,7 @@ export default function App() {
           <button style={gearBtn} onClick={() => setShowSettings(true)} title="Settings">⚙</button>
           <button
             style={{ ...gearBtn, background: '#fcbf47', color: '#fff' }}
-            onClick={() => setShowCoffee(true)}
+            onClick={() => { setCoffeeIsPrompt(false); setShowCoffee(true) }}
             title="Buy me a coffee"
             aria-label="Buy me a coffee"
           >
@@ -885,7 +903,7 @@ export default function App() {
 
       {/* Modals */}
       {showWelcome && <WelcomeModal onClose={handleCloseWelcome} />}
-      {showCoffee && <CoffeeModal onClose={() => setShowCoffee(false)} />}
+      {showCoffee && <CoffeeModal prompted={coffeeIsPrompt} onClose={() => setShowCoffee(false)} />}
       {showProjects && (
         <ProjectManager
           projects={projects}
