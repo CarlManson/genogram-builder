@@ -156,7 +156,7 @@ export default function GenogramConnections({ relationships, onCoupleDoubleClick
       }
 
       if (location) {
-        visibles.push(<text key={`loc-${familyKey}`} x={midX} y={coupleY - 8} textAnchor="middle" fontFamily="sans-serif" fontSize={11} fill={hovered ? HOVER_COLOR : "#555"} style={{ pointerEvents: 'none' }}>{location}</text>)
+        visibles.push(<text key={`loc-${familyKey}`} x={midX} y={coupleY - 8} textAnchor="middle" fontFamily="sans-serif" fontSize={11} fill={hovered ? HOVER_COLOR : design.locationTextColor} style={{ pointerEvents: 'none' }}>{location}</text>)
       }
     } else {
       midX = p1Pos.x + NW / 2

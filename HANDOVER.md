@@ -77,13 +77,19 @@ src/
 │   ├── GedcomImport.tsx            Drag-drop .ged file → person picker → generation sliders.
 │   ├── SettingsPanel.tsx           Modal with two tabs:
 │   │                               • General — name format, date display, Focal Person.
-│   │                               • Design — label font size, crop-names toggle, default
-│   │                                 shape outline colour/thickness, couple-line colour/
-│   │                                 thickness, parent-child line colour/thickness.
-│   │                                 Design values live on `Settings.design` (DesignSettings
-│   │                                 in lib/types.ts) and are applied by PersonNode,
+│   │                               • Design — font size + crop-names toggle, per-element
+│   │                                 text colours (name, date, occupation, cause-of-death,
+│   │                                 location), shape colours (outline, fill, deceased fill,
+│   │                                 deceased ✕), and couple/parent-child line colour +
+│   │                                 thickness. Native colour pickers throughout. Values
+│   │                                 live on `Settings.design` (DesignSettings in
+│   │                                 lib/types.ts) and are applied by PersonNode,
 │   │                                 GenogramConnections, and exportSvg. Hover blue
-│   │                                 (#3b82f6) is intentionally NOT customisable.
+│   │                                 (#3b82f6) and selection blue are intentionally NOT
+│   │                                 customisable. With cropNamesToShape=false (default),
+│   │                                 names are rendered as a sibling div BELOW the shape so
+│   │                                 they're never clipped by the shape boundary or by
+│   │                                 neighbouring nodes' fills.
 │   ├── ProjectManager.tsx          Modal: list/create/rename/delete genogram projects.
 │   ├── WelcomeModal.tsx            Modal: shown once on first visit (gated by localStorage key
 │   │                               `genogram-builder-welcome-seen-v1`). Brief intro + how-to +

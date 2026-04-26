@@ -28,25 +28,16 @@ function renderPersonSymbol(person: Person, pos: { x: number; y: number }, setti
   const cy = pos.y + HALF
   const stroke = person.outlineColor ?? design.outlineColor
   const strokeWidth = person.outlineColor ? Math.max(design.outlineThickness, 2) : design.outlineThickness
-  const fill = person.deceased ? '#e5e5e5' : '#fff'
+  const fill = person.deceased ? design.deceasedFillColor : design.shapeFillColor
 
   const nameOnly = nameLines(person, settings)
   const nameCount = nameOnly.length
   const dateStr = personDateLabel(person, settings.dateDisplay)
-  const lines = dateStr ? [...nameOnly, dateStr] : [...nameOnly]
-  if (lines.length === 0) lines.push('Unknown')
+  const labelLines = dateStr ? [...nameOnly, dateStr] : [...nameOnly]
+  if (labelLines.length === 0) labelLines.push('Unknown')
 
   const lineH = Math.max(12, Math.round(design.fontSize * 1.4))
-  const totalTextH = lines.length * lineH
-  const startY = cy - totalTextH / 2 + lineH * 0.5
 
-  const textEls = lines
-    .map((line, i) =>
-      `<text x="${cx}" y="${startY + i * lineH}" text-anchor="middle" dominant-baseline="middle" font-family="sans-serif" font-size="${design.fontSize}" fill="#1a1a1a"${i < nameCount ? ' font-weight="bold"' : ''}>${escapeXml(line)}</text>`
-    )
-    .join('')
-
-  const crossColor = '#999'
   let shape = ''
   let shapeClip = ''
   let textClip = ''
@@ -60,7 +51,6 @@ function renderPersonSymbol(person: Person, pos: { x: number; y: number }, setti
     shapeClip = `<circle cx="${cx}" cy="${cy}" r="${HALF - 1}"/>`
     textClip = `<circle cx="${cx}" cy="${cy}" r="${HALF - 4}"/>`
   } else {
-    // Unknown → triangle (point up); Other (and any unrecognised value) → diamond
     const pts = person.sex === 'unknown'
       ? `${cx},${pos.y + 2} ${pos.x + NODE_SIZE - 2},${pos.y + NODE_SIZE - 2} ${pos.x + 2},${pos.y + NODE_SIZE - 2}`
       : `${cx},${pos.y + 2} ${pos.x + NODE_SIZE - 2},${cy} ${cx},${pos.y + NODE_SIZE - 2} ${pos.x + 2},${cy}`
@@ -74,28 +64,46 @@ function renderPersonSymbol(person: Person, pos: { x: number; y: number }, setti
 
   const cross = person.deceased
     ? `<g clip-path="url(#${crossClipId})">` +
-      `<line x1="${pos.x + 12}" y1="${pos.y + 12}" x2="${pos.x + NODE_SIZE - 12}" y2="${pos.y + NODE_SIZE - 12}" stroke="${crossColor}" stroke-width="1.5"/>` +
-      `<line x1="${pos.x + NODE_SIZE - 12}" y1="${pos.y + 12}" x2="${pos.x + 12}" y2="${pos.y + NODE_SIZE - 12}" stroke="${crossColor}" stroke-width="1.5"/>` +
+      `<line x1="${pos.x + 12}" y1="${pos.y + 12}" x2="${pos.x + NODE_SIZE - 12}" y2="${pos.y + NODE_SIZE - 12}" stroke="${design.deceasedCrossColor}" stroke-width="1.5"/>` +
+      `<line x1="${pos.x + NODE_SIZE - 12}" y1="${pos.y + 12}" x2="${pos.x + 12}" y2="${pos.y + NODE_SIZE - 12}" stroke="${design.deceasedCrossColor}" stroke-width="1.5"/>` +
       `</g>`
     : ''
 
-  let extra = ''
-  let yOff = pos.y + NODE_SIZE + 14
-  if (person.occupation) {
-    extra += `<text x="${cx}" y="${yOff}" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#555">${escapeXml(person.occupation)}</text>`
-    yOff += 13
-  }
-  if (person.causeOfDeath) {
-    extra += `<text x="${cx}" y="${yOff}" text-anchor="middle" font-family="sans-serif" font-size="9" fill="#888" font-style="italic">${escapeXml(person.causeOfDeath)}</text>`
+  // Names: when cropping is on, draw inside the shape clipped; when off, draw
+  // below the shape so they're never clipped by the shape boundary.
+  let labelSvg = ''
+  if (design.cropNamesToShape) {
+    const totalTextH = labelLines.length * lineH
+    const startY = cy - totalTextH / 2 + lineH * 0.5
+    const els = labelLines.map((line, i) =>
+      `<text x="${cx}" y="${startY + i * lineH}" text-anchor="middle" dominant-baseline="middle" font-family="sans-serif" font-size="${design.fontSize}" fill="${i < nameCount ? design.nameTextColor : design.dateTextColor}"${i < nameCount ? ' font-weight="bold"' : ''}>${escapeXml(line)}</text>`
+    ).join('')
+    labelSvg = `<g clip-path="url(#${clipId})">${els}</g>`
+  } else {
+    let y = pos.y + NODE_SIZE + lineH
+    labelSvg = labelLines.map((line, i) => {
+      const t = `<text x="${cx}" y="${y}" text-anchor="middle" font-family="sans-serif" font-size="${design.fontSize}" fill="${i < nameCount ? design.nameTextColor : design.dateTextColor}"${i < nameCount ? ' font-weight="bold"' : ''}>${escapeXml(line)}</text>`
+      y += lineH
+      return t
+    }).join('')
   }
 
-  const wrappedText = design.cropNamesToShape
-    ? `<g clip-path="url(#${clipId})">${textEls}</g>`
-    : `<g>${textEls}</g>`
+  // Below-shape extras (occupation, cause of death). When labels are below the
+  // shape, push these further down so they don't collide with the name block.
+  let extra = ''
+  const labelOffset = design.cropNamesToShape ? 14 : (labelLines.length * lineH + lineH)
+  let yOff = pos.y + NODE_SIZE + labelOffset
+  if (person.occupation) {
+    extra += `<text x="${cx}" y="${yOff}" text-anchor="middle" font-family="sans-serif" font-size="${design.fontSize}" fill="${design.occupationTextColor}">${escapeXml(person.occupation)}</text>`
+    yOff += lineH
+  }
+  if (person.causeOfDeath) {
+    extra += `<text x="${cx}" y="${yOff}" text-anchor="middle" font-family="sans-serif" font-size="${design.fontSize}" fill="${design.causeOfDeathTextColor}" font-style="italic">${escapeXml(person.causeOfDeath)}</text>`
+  }
 
   return `<defs><clipPath id="${crossClipId}">${shapeClip}</clipPath><clipPath id="${clipId}">${textClip}</clipPath></defs>` +
     shape + cross +
-    wrappedText +
+    labelSvg +
     extra
 }
 function renderFamilies(
@@ -180,7 +188,7 @@ function renderFamilies(
 
       const location = locationMap.get([p1Id, p2Id].sort().join(':'))
       if (location) {
-        lines.push(`<text x="${midX}" y="${coupleY - 8}" text-anchor="middle" font-family="sans-serif" font-size="11" fill="#555">${escapeXml(location)}</text>`)
+        lines.push(`<text x="${midX}" y="${coupleY - 8}" text-anchor="middle" font-family="sans-serif" font-size="11" fill="${design.locationTextColor}">${escapeXml(location)}</text>`)
       }
 
       // Offset 12px left of midX so slashes don't overlap the drop line
@@ -259,10 +267,14 @@ export function exportToSvg(data: GenogramData, settings: Settings = DEFAULT_SET
 
   const xs = Object.values(nodePositions).map(p => p.x)
   const ys = Object.values(nodePositions).map(p => p.y)
+  // When labels render below the shape, reserve enough vertical room for the
+  // name + date lines + occupation/cause-of-death (worst case ~5 lines).
+  const lineH = Math.max(12, Math.round(settings.design.fontSize * 1.4))
+  const labelRoom = settings.design.cropNamesToShape ? 40 : (5 * lineH + 10)
   const minX = Math.min(...xs) - PAD
   const minY = Math.min(...ys) - PAD
   const maxX = Math.max(...xs) + NODE_SIZE + PAD
-  const maxY = Math.max(...ys) + NODE_SIZE + 40 + PAD
+  const maxY = Math.max(...ys) + NODE_SIZE + labelRoom + PAD
 
   const width = maxX - minX
   const height = maxY - minY

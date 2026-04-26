@@ -3,18 +3,41 @@ export type DateDisplay = 'date' | 'year' | 'age'
 export type NameFormat = 'birth' | 'married' | 'first-only'
 
 export interface DesignSettings {
+  // Typography
   fontSize: number                  // shape label font size in px
+  nameTextColor: string             // name labels
+  dateTextColor: string             // birth / death date labels
+  occupationTextColor: string       // occupation, rendered below the shape
+  causeOfDeathTextColor: string     // cause of death, italic, below the shape
+  locationTextColor: string         // location label above couple lines
+
+  // Shapes
+  shapeFillColor: string            // alive person's shape fill
+  deceasedFillColor: string         // deceased person's shape fill
+  deceasedCrossColor: string        // X cross drawn over deceased shapes
   outlineColor: string              // default shape stroke (when no per-person override)
   outlineThickness: number          // default shape stroke width
+
+  // Relationship lines
   coupleLineColor: string           // marriage / couple horizontal lines
   coupleLineThickness: number
   parentChildLineColor: string      // drop, sibship, child verticals
   parentChildLineThickness: number
-  cropNamesToShape: boolean         // when false (default), names render unclipped
+
+  // Layout
+  cropNamesToShape: boolean         // false (default) → names render below the shape, never cropped
 }
 
 export const DEFAULT_DESIGN: DesignSettings = {
   fontSize: 10,
+  nameTextColor: '#1a1a1a',
+  dateTextColor: '#1a1a1a',
+  occupationTextColor: '#555555',
+  causeOfDeathTextColor: '#888888',
+  locationTextColor: '#555555',
+  shapeFillColor: '#ffffff',
+  deceasedFillColor: '#e5e5e5',
+  deceasedCrossColor: '#999999',
   outlineColor: '#1a1a1a',
   outlineThickness: 1.5,
   coupleLineColor: '#1a1a1a',

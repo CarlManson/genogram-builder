@@ -6,6 +6,8 @@ import { useSettings } from '../lib/SettingsContext'
 
 export const NODE_SIZE = 80
 const HALF = NODE_SIZE / 2
+const LABEL_WIDTH = 200   // width of the below-shape label block; wide enough that
+                          // names overflow visually before they get cropped by the SVG
 
 interface PersonNodeData extends Record<string, unknown> {
   person: Person
@@ -35,17 +37,21 @@ function PersonShape({ person, settings, hovered }: { person: Person; settings: 
   const design = settings.design
   const baseStroke = person.outlineColor ?? design.outlineColor
   const baseStrokeWidth = person.outlineColor ? Math.max(design.outlineThickness, 2) : design.outlineThickness
-  const fill = person.deceased ? '#e5e5e5' : '#fff'
+  const fill = person.deceased ? design.deceasedFillColor : design.shapeFillColor
   const stroke = hovered ? '#3b82f6' : baseStroke
   const strokeWidth = hovered ? baseStrokeWidth + 1 : baseStrokeWidth
   const id = person.id.replace(/\W/g, '')
 
+  // Text inside the shape is only rendered when the user has opted in via
+  // `cropNamesToShape`. The default flow renders names as a sibling div below
+  // the shape (see PersonNode below) so they're never clipped.
+  const showInsideText = design.cropNamesToShape
   const { lines, nameCount } = buildLines(person, settings)
   const lineH = Math.max(12, Math.round(design.fontSize * 1.4))
   const totalTextH = lines.length * lineH
   const startY = HALF - totalTextH / 2 + lineH * 0.5
 
-  const textEls = lines.map((line, i) => (
+  const textEls = showInsideText ? lines.map((line, i) => (
     <text
       key={i}
       x={HALF}
@@ -54,37 +60,33 @@ function PersonShape({ person, settings, hovered }: { person: Person; settings: 
       dominantBaseline="middle"
       fontFamily="sans-serif"
       fontSize={design.fontSize}
-      fill="#1a1a1a"
+      fill={i < nameCount ? design.nameTextColor : design.dateTextColor}
       fontWeight={i < nameCount ? 'bold' : 'normal'}
     >
       {line}
     </text>
-  ))
+  )) : null
 
-  const wrapText = (textClipId: string) => design.cropNamesToShape
-    ? <g clipPath={`url(#${textClipId})`}>{textEls}</g>
-    : <g>{textEls}</g>
-
-  // Cross is clipped to the shape so it never bleeds outside the boundary.
-  // Lighter stroke so text stays readable.
   const crossLines = person.deceased ? (
     <>
-      <line x1={12} y1={12} x2={NODE_SIZE - 12} y2={NODE_SIZE - 12} stroke="#999" strokeWidth={1.5} />
-      <line x1={NODE_SIZE - 12} y1={12} x2={12} y2={NODE_SIZE - 12} stroke="#999" strokeWidth={1.5} />
+      <line x1={12} y1={12} x2={NODE_SIZE - 12} y2={NODE_SIZE - 12} stroke={design.deceasedCrossColor} strokeWidth={1.5} />
+      <line x1={NODE_SIZE - 12} y1={12} x2={12} y2={NODE_SIZE - 12} stroke={design.deceasedCrossColor} strokeWidth={1.5} />
     </>
   ) : null
 
   if (person.sex === 'male') {
     return (
       <svg width={NODE_SIZE} height={NODE_SIZE} style={{ display: 'block', overflow: 'visible' }}>
-        <defs>
-          <clipPath id={`clip-text-${id}`}>
-            <rect x={3} y={3} width={NODE_SIZE - 6} height={NODE_SIZE - 6} />
-          </clipPath>
-        </defs>
+        {showInsideText && (
+          <defs>
+            <clipPath id={`clip-text-${id}`}>
+              <rect x={3} y={3} width={NODE_SIZE - 6} height={NODE_SIZE - 6} />
+            </clipPath>
+          </defs>
+        )}
         <rect x={1} y={1} width={NODE_SIZE - 2} height={NODE_SIZE - 2} rx={2} fill={fill} stroke={stroke} strokeWidth={strokeWidth} />
         {crossLines}
-        {wrapText(`clip-text-${id}`)}
+        {showInsideText && <g clipPath={`url(#clip-text-${id})`}>{textEls}</g>}
       </svg>
     )
   }
@@ -93,17 +95,18 @@ function PersonShape({ person, settings, hovered }: { person: Person; settings: 
     return (
       <svg width={NODE_SIZE} height={NODE_SIZE} style={{ display: 'block', overflow: 'visible' }}>
         <defs>
-          {/* shape clip keeps cross inside circle; text clip insets slightly more */}
           <clipPath id={`clip-shape-${id}`}>
             <circle cx={HALF} cy={HALF} r={HALF - 1} />
           </clipPath>
-          <clipPath id={`clip-text-${id}`}>
-            <circle cx={HALF} cy={HALF} r={HALF - 4} />
-          </clipPath>
+          {showInsideText && (
+            <clipPath id={`clip-text-${id}`}>
+              <circle cx={HALF} cy={HALF} r={HALF - 4} />
+            </clipPath>
+          )}
         </defs>
         <circle cx={HALF} cy={HALF} r={HALF - 1} fill={fill} stroke={stroke} strokeWidth={strokeWidth} />
         <g clipPath={`url(#clip-shape-${id})`}>{crossLines}</g>
-        {wrapText(`clip-text-${id}`)}
+        {showInsideText && <g clipPath={`url(#clip-text-${id})`}>{textEls}</g>}
       </svg>
     )
   }
@@ -118,13 +121,15 @@ function PersonShape({ person, settings, hovered }: { person: Person; settings: 
         <clipPath id={`clip-shape-${id}`}>
           <polygon points={pts} />
         </clipPath>
-        <clipPath id={`clip-text-${id}`}>
-          <polygon points={pts} />
-        </clipPath>
+        {showInsideText && (
+          <clipPath id={`clip-text-${id}`}>
+            <polygon points={pts} />
+          </clipPath>
+        )}
       </defs>
       <polygon points={pts} fill={fill} stroke={stroke} strokeWidth={strokeWidth} />
       <g clipPath={`url(#clip-shape-${id})`}>{crossLines}</g>
-      <g clipPath={`url(#clip-text-${id})`}>{textEls}</g>
+      {showInsideText && <g clipPath={`url(#clip-text-${id})`}>{textEls}</g>}
     </svg>
   )
 }
@@ -132,7 +137,10 @@ function PersonShape({ person, settings, hovered }: { person: Person; settings: 
 function PersonNode({ data, selected }: NodeProps) {
   const { person } = data as PersonNodeData
   const settings = useSettings()
+  const design = settings.design
   const [hovered, setHovered] = useState(false)
+  const showLabelBelow = !design.cropNamesToShape
+  const { lines, nameCount } = buildLines(person, settings)
 
   return (
     <div
@@ -147,18 +155,36 @@ function PersonNode({ data, selected }: NodeProps) {
         }} />
       )}
       <PersonShape person={person} settings={settings} hovered={hovered} />
+      {showLabelBelow && (
+        <div style={{
+          textAlign: 'center', fontFamily: 'sans-serif',
+          fontSize: design.fontSize, lineHeight: 1.25,
+          marginTop: 4, width: LABEL_WIDTH, marginLeft: (NODE_SIZE - LABEL_WIDTH) / 2,
+        }}>
+          {lines.map((line, i) => (
+            <div key={i} style={{
+              fontWeight: i < nameCount ? 600 : 400,
+              color: i < nameCount ? design.nameTextColor : design.dateTextColor,
+            }}>
+              {line}
+            </div>
+          ))}
+        </div>
+      )}
       {person.occupation && (
         <div style={{
-          textAlign: 'center', fontSize: 10, fontFamily: 'sans-serif', color: '#555',
-          marginTop: 3, width: 120, marginLeft: (NODE_SIZE - 120) / 2, lineHeight: 1.3,
+          textAlign: 'center', fontSize: design.fontSize, fontFamily: 'sans-serif',
+          color: design.occupationTextColor,
+          marginTop: 3, width: LABEL_WIDTH, marginLeft: (NODE_SIZE - LABEL_WIDTH) / 2, lineHeight: 1.25,
         }}>
           {person.occupation}
         </div>
       )}
       {person.causeOfDeath && (
         <div style={{
-          textAlign: 'center', fontSize: 10, fontFamily: 'sans-serif', color: '#888',
-          fontStyle: 'italic', width: 120, marginLeft: (NODE_SIZE - 120) / 2, lineHeight: 1.3,
+          textAlign: 'center', fontSize: design.fontSize, fontFamily: 'sans-serif',
+          color: design.causeOfDeathTextColor, fontStyle: 'italic',
+          width: LABEL_WIDTH, marginLeft: (NODE_SIZE - LABEL_WIDTH) / 2, lineHeight: 1.25,
         }}>
           {person.causeOfDeath}
         </div>
