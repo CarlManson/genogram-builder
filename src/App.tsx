@@ -802,7 +802,7 @@ export default function App() {
           <div style={toolbarDivider} />
           <button style={gearBtn} onClick={() => setShowSettings(true)} title="Settings">⚙</button>
           <button
-            style={{ ...gearBtn, color: '#fcbf47' }}
+            style={{ ...gearBtn, background: '#fcbf47', color: '#fff' }}
             onClick={() => setShowCoffee(true)}
             title="Buy me a coffee"
             aria-label="Buy me a coffee"
