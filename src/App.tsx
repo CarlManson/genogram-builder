@@ -21,6 +21,8 @@ import SettingsPanel from './components/SettingsPanel'
 import ProjectManager from './components/ProjectManager'
 import SelectionToolbar from './components/SelectionToolbar'
 import WelcomeModal from './components/WelcomeModal'
+import CoffeeModal from './components/CoffeeModal'
+import { Coffee } from 'lucide-react'
 import { Person, Relationship, GenogramData, Settings, DEFAULT_SETTINGS, DEFAULT_DESIGN, RelContext, Project } from './lib/types'
 import type { ParentIds } from './components/PersonEditor'
 import { SettingsContext } from './lib/SettingsContext'
@@ -78,6 +80,7 @@ export default function App() {
   const [showGedcom, setShowGedcom] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const [showProjects, setShowProjects] = useState(false)
+  const [showCoffee, setShowCoffee] = useState(false)
   const [showWelcome, setShowWelcome] = useState<boolean>(() => {
     try { return !localStorage.getItem(LS_WELCOME_SEEN_KEY) } catch { return false }
   })
@@ -797,6 +800,14 @@ export default function App() {
           <button style={addBtn} onClick={() => setEditPerson('new')}>+ Person</button>
           <button style={addBtn} onClick={() => setEditRel('new')}>+ Relationship</button>
           <div style={toolbarDivider} />
+          <button
+            style={gearBtn}
+            onClick={() => setShowCoffee(true)}
+            title="Buy me a coffee"
+            aria-label="Buy me a coffee"
+          >
+            <Coffee size={17} />
+          </button>
           <button style={gearBtn} onClick={() => setShowSettings(true)} title="Settings">⚙</button>
         </div>
       </div>
@@ -874,6 +885,7 @@ export default function App() {
 
       {/* Modals */}
       {showWelcome && <WelcomeModal onClose={handleCloseWelcome} />}
+      {showCoffee && <CoffeeModal onClose={() => setShowCoffee(false)} />}
       {showProjects && (
         <ProjectManager
           projects={projects}
@@ -1062,6 +1074,7 @@ const gearBtn: React.CSSProperties = {
   padding: '6px 8px', fontSize: 17, fontFamily: 'sans-serif', cursor: 'pointer',
   background: 'transparent', border: '1px solid transparent', borderRadius: 6,
   color: '#6b7280', lineHeight: 1,
+  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
 }
 // Kept for empty-state panel
 const btnGroup: React.CSSProperties = { display: 'flex', gap: 6 }
