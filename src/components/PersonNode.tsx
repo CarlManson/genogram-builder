@@ -32,13 +32,16 @@ function buildLines(person: Person, settings: Settings): { lines: string[]; name
 }
 
 function PersonShape({ person, settings, hovered }: { person: Person; settings: Settings; hovered: boolean }) {
+  const design = settings.design
+  const baseStroke = person.outlineColor ?? design.outlineColor
+  const baseStrokeWidth = person.outlineColor ? Math.max(design.outlineThickness, 2) : design.outlineThickness
   const fill = person.deceased ? '#e5e5e5' : '#fff'
-  const stroke = hovered ? '#3b82f6' : (person.outlineColor ?? '#1a1a1a')
-  const strokeWidth = hovered ? 2.5 : (person.outlineColor ? 2 : 1.5)
+  const stroke = hovered ? '#3b82f6' : baseStroke
+  const strokeWidth = hovered ? baseStrokeWidth + 1 : baseStrokeWidth
   const id = person.id.replace(/\W/g, '')
 
   const { lines, nameCount } = buildLines(person, settings)
-  const lineH = 14
+  const lineH = Math.max(12, Math.round(design.fontSize * 1.4))
   const totalTextH = lines.length * lineH
   const startY = HALF - totalTextH / 2 + lineH * 0.5
 
@@ -50,13 +53,17 @@ function PersonShape({ person, settings, hovered }: { person: Person; settings: 
       textAnchor="middle"
       dominantBaseline="middle"
       fontFamily="sans-serif"
-      fontSize={10}
+      fontSize={design.fontSize}
       fill="#1a1a1a"
       fontWeight={i < nameCount ? 'bold' : 'normal'}
     >
       {line}
     </text>
   ))
+
+  const wrapText = (textClipId: string) => design.cropNamesToShape
+    ? <g clipPath={`url(#${textClipId})`}>{textEls}</g>
+    : <g>{textEls}</g>
 
   // Cross is clipped to the shape so it never bleeds outside the boundary.
   // Lighter stroke so text stays readable.
@@ -77,7 +84,7 @@ function PersonShape({ person, settings, hovered }: { person: Person; settings: 
         </defs>
         <rect x={1} y={1} width={NODE_SIZE - 2} height={NODE_SIZE - 2} rx={2} fill={fill} stroke={stroke} strokeWidth={strokeWidth} />
         {crossLines}
-        <g clipPath={`url(#clip-text-${id})`}>{textEls}</g>
+        {wrapText(`clip-text-${id}`)}
       </svg>
     )
   }
@@ -96,7 +103,7 @@ function PersonShape({ person, settings, hovered }: { person: Person; settings: 
         </defs>
         <circle cx={HALF} cy={HALF} r={HALF - 1} fill={fill} stroke={stroke} strokeWidth={strokeWidth} />
         <g clipPath={`url(#clip-shape-${id})`}>{crossLines}</g>
-        <g clipPath={`url(#clip-text-${id})`}>{textEls}</g>
+        {wrapText(`clip-text-${id}`)}
       </svg>
     )
   }

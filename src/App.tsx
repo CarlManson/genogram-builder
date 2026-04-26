@@ -21,7 +21,7 @@ import SettingsPanel from './components/SettingsPanel'
 import ProjectManager from './components/ProjectManager'
 import SelectionToolbar from './components/SelectionToolbar'
 import WelcomeModal from './components/WelcomeModal'
-import { Person, Relationship, GenogramData, Settings, DEFAULT_SETTINGS, RelContext, Project } from './lib/types'
+import { Person, Relationship, GenogramData, Settings, DEFAULT_SETTINGS, DEFAULT_DESIGN, RelContext, Project } from './lib/types'
 import type { ParentIds } from './components/PersonEditor'
 import { SettingsContext } from './lib/SettingsContext'
 import { exportToSvg } from './lib/exportSvg'
@@ -62,7 +62,13 @@ export default function App() {
   const [settings, setSettings] = useState<Settings>(() => {
     try {
       const saved = localStorage.getItem(LS_SETTINGS_KEY)
-      return saved ? { ...DEFAULT_SETTINGS, ...JSON.parse(saved) } : DEFAULT_SETTINGS
+      if (!saved) return DEFAULT_SETTINGS
+      const parsed = JSON.parse(saved) as Partial<Settings>
+      return {
+        ...DEFAULT_SETTINGS,
+        ...parsed,
+        design: { ...DEFAULT_DESIGN, ...(parsed.design ?? {}) },
+      }
     } catch { return DEFAULT_SETTINGS }
   })
 

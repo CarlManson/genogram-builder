@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { Person, Sex, DateDisplay, Settings, DEFAULT_SETTINGS, RelContext, RelContextType } from '../lib/types'
+import { Person, Sex, DateDisplay, Settings, DEFAULT_SETTINGS, RelContext, RelContextType, OUTLINE_COLORS } from '../lib/types'
 
 const DATE_DISPLAY_LABELS: Record<DateDisplay, string> = {
   year: 'Year',
@@ -14,13 +14,9 @@ const REL_TYPE_LABELS: Partial<Record<RelContextType, string>> = {
   'sibling-of': 'Sibling of',
 }
 
-// Outline-colour palette. Index 0 (#1a1a1a) is the default ink — picking it
-// clears any custom colour rather than persisting the explicit value.
-const OUTLINE_COLORS = [
-  '#1a1a1a', '#64748b', '#dc2626', '#ea580c',
-  '#ca8a04', '#16a34a', '#0d9488', '#0284c7',
-  '#2563eb', '#4f46e5', '#9333ea', '#db2777',
-]
+// OUTLINE_COLORS is shared with Settings → Design (defined in lib/types.ts).
+// Index 0 (#1a1a1a) is the default ink — picking it clears any custom colour
+// here rather than persisting the explicit value.
 
 export interface ParentIds {
   fatherId?: string

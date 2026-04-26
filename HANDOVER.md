@@ -75,7 +75,15 @@ src/
 │   │                               Father/Mother section (always shown). Position-in-tree for new persons.
 │   ├── RelationshipEditor.tsx      Modal form: from/to person, type (incl. never-married-separated), location.
 │   ├── GedcomImport.tsx            Drag-drop .ged file → person picker → generation sliders.
-│   ├── SettingsPanel.tsx           Modal: global name format + date display defaults, Focal Person selection.
+│   ├── SettingsPanel.tsx           Modal with two tabs:
+│   │                               • General — name format, date display, Focal Person.
+│   │                               • Design — label font size, crop-names toggle, default
+│   │                                 shape outline colour/thickness, couple-line colour/
+│   │                                 thickness, parent-child line colour/thickness.
+│   │                                 Design values live on `Settings.design` (DesignSettings
+│   │                                 in lib/types.ts) and are applied by PersonNode,
+│   │                                 GenogramConnections, and exportSvg. Hover blue
+│   │                                 (#3b82f6) is intentionally NOT customisable.
 │   ├── ProjectManager.tsx          Modal: list/create/rename/delete genogram projects.
 │   ├── WelcomeModal.tsx            Modal: shown once on first visit (gated by localStorage key
 │   │                               `genogram-builder-welcome-seen-v1`). Brief intro + how-to +

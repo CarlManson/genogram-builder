@@ -23,10 +23,11 @@ function nameLines(person: Person, settings: Settings): string[] {
 }
 
 function renderPersonSymbol(person: Person, pos: { x: number; y: number }, settings: Settings): string {
+  const design = settings.design
   const cx = pos.x + HALF
   const cy = pos.y + HALF
-  const stroke = person.outlineColor ?? '#1a1a1a'
-  const strokeWidth = person.outlineColor ? 2 : 1.5
+  const stroke = person.outlineColor ?? design.outlineColor
+  const strokeWidth = person.outlineColor ? Math.max(design.outlineThickness, 2) : design.outlineThickness
   const fill = person.deceased ? '#e5e5e5' : '#fff'
 
   const nameOnly = nameLines(person, settings)
@@ -35,13 +36,13 @@ function renderPersonSymbol(person: Person, pos: { x: number; y: number }, setti
   const lines = dateStr ? [...nameOnly, dateStr] : [...nameOnly]
   if (lines.length === 0) lines.push('Unknown')
 
-  const lineH = 14
+  const lineH = Math.max(12, Math.round(design.fontSize * 1.4))
   const totalTextH = lines.length * lineH
   const startY = cy - totalTextH / 2 + lineH * 0.5
 
   const textEls = lines
     .map((line, i) =>
-      `<text x="${cx}" y="${startY + i * lineH}" text-anchor="middle" dominant-baseline="middle" font-family="sans-serif" font-size="10" fill="#1a1a1a"${i < nameCount ? ' font-weight="bold"' : ''}>${escapeXml(line)}</text>`
+      `<text x="${cx}" y="${startY + i * lineH}" text-anchor="middle" dominant-baseline="middle" font-family="sans-serif" font-size="${design.fontSize}" fill="#1a1a1a"${i < nameCount ? ' font-weight="bold"' : ''}>${escapeXml(line)}</text>`
     )
     .join('')
 
@@ -88,9 +89,13 @@ function renderPersonSymbol(person: Person, pos: { x: number; y: number }, setti
     extra += `<text x="${cx}" y="${yOff}" text-anchor="middle" font-family="sans-serif" font-size="9" fill="#888" font-style="italic">${escapeXml(person.causeOfDeath)}</text>`
   }
 
+  const wrappedText = design.cropNamesToShape
+    ? `<g clip-path="url(#${clipId})">${textEls}</g>`
+    : `<g>${textEls}</g>`
+
   return `<defs><clipPath id="${crossClipId}">${shapeClip}</clipPath><clipPath id="${clipId}">${textClip}</clipPath></defs>` +
     shape + cross +
-    `<g clip-path="url(#${clipId})">${textEls}</g>` +
+    wrappedText +
     extra
 }
 function renderFamilies(
@@ -98,6 +103,11 @@ function renderFamilies(
   positions: Record<string, { x: number; y: number }>,
   settings: Settings
 ): string {
+  const design = settings.design
+  const cc = design.coupleLineColor
+  const cw = design.coupleLineThickness
+  const pc = design.parentChildLineColor
+  const pw = design.parentChildLineThickness
   const personMap = new Map(data.people.map(p => [p.id, p]))
   const families = buildFamilies(data.relationships)
   const locationMap = new Map<string, string>()
@@ -166,7 +176,7 @@ function renderFamilies(
       const isDashed = family.coupleType === 'cohabiting' || family.coupleType === 'never-married-separated'
       const dash = isDashed ? ' stroke-dasharray="6,4"' : ''
 
-      lines.push(`<line x1="${x1}" y1="${coupleY}" x2="${x2}" y2="${coupleY}" stroke="#1a1a1a" stroke-width="2"${dash}/>`)
+      lines.push(`<line x1="${x1}" y1="${coupleY}" x2="${x2}" y2="${coupleY}" stroke="${cc}" stroke-width="${cw}"${dash}/>`)
 
       const location = locationMap.get([p1Id, p2Id].sort().join(':'))
       if (location) {
@@ -176,10 +186,10 @@ function renderFamilies(
       // Offset 12px left of midX so slashes don't overlap the drop line
       const slashCx = midX - 12
       if (family.coupleType === 'divorced') {
-        lines.push(`<line x1="${slashCx - 6}" y1="${coupleY - 8}" x2="${slashCx - 2}" y2="${coupleY + 8}" stroke="#1a1a1a" stroke-width="2"/>`)
-        lines.push(`<line x1="${slashCx + 2}" y1="${coupleY - 8}" x2="${slashCx + 6}" y2="${coupleY + 8}" stroke="#1a1a1a" stroke-width="2"/>`)
+        lines.push(`<line x1="${slashCx - 6}" y1="${coupleY - 8}" x2="${slashCx - 2}" y2="${coupleY + 8}" stroke="${cc}" stroke-width="${cw}"/>`)
+        lines.push(`<line x1="${slashCx + 2}" y1="${coupleY - 8}" x2="${slashCx + 6}" y2="${coupleY + 8}" stroke="${cc}" stroke-width="${cw}"/>`)
       } else if (family.coupleType === 'separated' || family.coupleType === 'never-married-separated') {
-        lines.push(`<line x1="${slashCx - 4}" y1="${coupleY - 8}" x2="${slashCx}" y2="${coupleY + 8}" stroke="#1a1a1a" stroke-width="2"/>`)
+        lines.push(`<line x1="${slashCx - 4}" y1="${coupleY - 8}" x2="${slashCx}" y2="${coupleY + 8}" stroke="${cc}" stroke-width="${cw}"/>`)
       }
     } else {
       midX = p1Pos.x + HALF
@@ -195,8 +205,8 @@ function renderFamilies(
         const sibLeft = Math.min(midX, ...childCXs)
         const sibRight = Math.max(midX, ...childCXs)
 
-        lines.push(`<line x1="${midX}" y1="${coupleY}" x2="${midX}" y2="${sibshipY}" stroke="#1a1a1a" stroke-width="1.5"/>`)
-        lines.push(`<line x1="${sibLeft}" y1="${sibshipY}" x2="${sibRight}" y2="${sibshipY}" stroke="#1a1a1a" stroke-width="1.5"/>`)
+        lines.push(`<line x1="${midX}" y1="${coupleY}" x2="${midX}" y2="${sibshipY}" stroke="${pc}" stroke-width="${pw}"/>`)
+        lines.push(`<line x1="${sibLeft}" y1="${sibshipY}" x2="${sibRight}" y2="${sibshipY}" stroke="${pc}" stroke-width="${pw}"/>`)
 
         const dateGroups = new Map<string, string[]>()
         const nonDateChildren: string[] = []
@@ -215,7 +225,7 @@ function renderFamilies(
           const cp = positions[childId]
           if (!cp) continue
           const cx = cp.x + HALF
-          lines.push(`<line x1="${cx}" y1="${sibshipY}" x2="${cx}" y2="${cp.y}" stroke="#1a1a1a" stroke-width="1.5"/>`)
+          lines.push(`<line x1="${cx}" y1="${sibshipY}" x2="${cx}" y2="${cp.y}" stroke="${pc}" stroke-width="${pw}"/>`)
         }
 
         for (const ids of dateGroups.values()) {
@@ -223,7 +233,7 @@ function renderFamilies(
             const cp = positions[ids[0]]
             if (!cp) continue
             const cx = cp.x + HALF
-            lines.push(`<line x1="${cx}" y1="${sibshipY}" x2="${cx}" y2="${cp.y}" stroke="#1a1a1a" stroke-width="1.5"/>`)
+            lines.push(`<line x1="${cx}" y1="${sibshipY}" x2="${cx}" y2="${cp.y}" stroke="${pc}" stroke-width="${pw}"/>`)
           } else {
             const cPositions = ids.map(id => positions[id]).filter(Boolean) as { x: number; y: number }[]
             const avgCX = cPositions.reduce((sum, p) => sum + p.x + HALF, 0) / cPositions.length
@@ -231,7 +241,7 @@ function renderFamilies(
               const cp = positions[id]
               if (!cp) continue
               const cx = cp.x + HALF
-              lines.push(`<line x1="${avgCX}" y1="${sibshipY}" x2="${cx}" y2="${cp.y}" stroke="#1a1a1a" stroke-width="1.5"/>`)
+              lines.push(`<line x1="${avgCX}" y1="${sibshipY}" x2="${cx}" y2="${cp.y}" stroke="${pc}" stroke-width="${pw}"/>`)
             }
           }
         }

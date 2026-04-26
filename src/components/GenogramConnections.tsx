@@ -8,7 +8,6 @@ const NW = 80
 const NH = 80
 const SIBSHIP_GAP = 28
 const HOVER_COLOR = '#3b82f6'
-const BASE_COLOR = '#1a1a1a'
 
 interface Props {
   relationships: Relationship[]
@@ -18,8 +17,14 @@ interface Props {
 export default function GenogramConnections({ relationships, onCoupleDoubleClick }: Props) {
   const nodes = useNodes()
   const settings = useSettings()
+  const design = settings.design
   const { x: vpX, y: vpY, zoom } = useViewport()
   const [hoveredKey, setHoveredKey] = useState<string | null>(null)
+
+  const coupleColor = design.coupleLineColor
+  const coupleWidth = design.coupleLineThickness
+  const pcColor = design.parentChildLineColor
+  const pcWidth = design.parentChildLineThickness
 
   const posMap = new Map(nodes.map(n => [n.id, n.position]))
   const personMap = new Map(nodes.map(n => [n.id, n.data.person as Person]))
@@ -130,8 +135,8 @@ export default function GenogramConnections({ relationships, onCoupleDoubleClick
       const isDashed = family.coupleType === 'cohabiting' || family.coupleType === 'never-married-separated'
       const dash = isDashed ? '6,4' : undefined
       const hovered = hoveredKey === familyKey
-      const stroke = hovered ? HOVER_COLOR : BASE_COLOR
-      const strokeWidth = hovered ? 3 : 2
+      const stroke = hovered ? HOVER_COLOR : coupleColor
+      const strokeWidth = hovered ? coupleWidth + 1 : coupleWidth
 
       visibles.push(
         <line key={`couple-${familyKey}`} x1={x1} y1={coupleY} x2={x2} y2={coupleY} stroke={stroke} strokeWidth={strokeWidth} strokeDasharray={dash} style={{ pointerEvents: 'none' }} />
@@ -169,11 +174,11 @@ export default function GenogramConnections({ relationships, onCoupleDoubleClick
         sibRight = Math.max(midX, ...childCXs)
 
         const hovered = hoveredKey === familyKey
-        const stroke = hovered && !isSingleParent ? HOVER_COLOR : BASE_COLOR
+        const stroke = hovered && !isSingleParent ? HOVER_COLOR : pcColor
 
         visibles.push(
-          <line key={`drop-${familyKey}`} x1={midX} y1={coupleY} x2={midX} y2={sibshipY} stroke={stroke} strokeWidth={1.5} style={{ pointerEvents: 'none' }} />,
-          <line key={`sib-${familyKey}`} x1={sibLeft} y1={sibshipY} x2={sibRight} y2={sibshipY} stroke={stroke} strokeWidth={1.5} style={{ pointerEvents: 'none' }} />
+          <line key={`drop-${familyKey}`} x1={midX} y1={coupleY} x2={midX} y2={sibshipY} stroke={stroke} strokeWidth={pcWidth} style={{ pointerEvents: 'none' }} />,
+          <line key={`sib-${familyKey}`} x1={sibLeft} y1={sibshipY} x2={sibRight} y2={sibshipY} stroke={stroke} strokeWidth={pcWidth} style={{ pointerEvents: 'none' }} />
         )
 
         // Group children by birthDate to detect twins
@@ -194,7 +199,7 @@ export default function GenogramConnections({ relationships, onCoupleDoubleClick
           const cp = posMap.get(childId)
           if (!cp) continue
           const cx = cp.x + NW / 2
-          visibles.push(<line key={`child-${familyKey}-${childId}`} x1={cx} y1={sibshipY} x2={cx} y2={cp.y} stroke={BASE_COLOR} strokeWidth={1.5} style={{ pointerEvents: 'none' }} />)
+          visibles.push(<line key={`child-${familyKey}-${childId}`} x1={cx} y1={sibshipY} x2={cx} y2={cp.y} stroke={pcColor} strokeWidth={pcWidth} style={{ pointerEvents: 'none' }} />)
         }
 
         for (const [, ids] of dateGroups.entries()) {
@@ -202,7 +207,7 @@ export default function GenogramConnections({ relationships, onCoupleDoubleClick
             const cp = posMap.get(ids[0])
             if (!cp) continue
             const cx = cp.x + NW / 2
-            visibles.push(<line key={`child-${familyKey}-${ids[0]}`} x1={cx} y1={sibshipY} x2={cx} y2={cp.y} stroke={BASE_COLOR} strokeWidth={1.5} style={{ pointerEvents: 'none' }} />)
+            visibles.push(<line key={`child-${familyKey}-${ids[0]}`} x1={cx} y1={sibshipY} x2={cx} y2={cp.y} stroke={pcColor} strokeWidth={pcWidth} style={{ pointerEvents: 'none' }} />)
           } else {
             // Twins! Converge to a single point on sibship line (average of their horizontal positions)
             const cPositions = ids.map(id => posMap.get(id)).filter(Boolean) as { x: number; y: number }[]
@@ -211,7 +216,7 @@ export default function GenogramConnections({ relationships, onCoupleDoubleClick
               const cp = posMap.get(id)
               if (!cp) continue
               const cx = cp.x + NW / 2
-              visibles.push(<line key={`child-${familyKey}-${id}`} x1={avgCX} y1={sibshipY} x2={cx} y2={cp.y} stroke={BASE_COLOR} strokeWidth={1.5} style={{ pointerEvents: 'none' }} />)
+              visibles.push(<line key={`child-${familyKey}-${id}`} x1={avgCX} y1={sibshipY} x2={cx} y2={cp.y} stroke={pcColor} strokeWidth={pcWidth} style={{ pointerEvents: 'none' }} />)
             }
           }
         }
