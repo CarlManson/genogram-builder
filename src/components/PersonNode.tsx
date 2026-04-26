@@ -33,8 +33,8 @@ function buildLines(person: Person, settings: Settings): { lines: string[]; name
 
 function PersonShape({ person, settings, hovered }: { person: Person; settings: Settings; hovered: boolean }) {
   const fill = person.deceased ? '#e5e5e5' : '#fff'
-  const stroke = hovered ? '#3b82f6' : '#1a1a1a'
-  const strokeWidth = hovered ? 2.5 : 1.5
+  const stroke = hovered ? '#3b82f6' : (person.outlineColor ?? '#1a1a1a')
+  const strokeWidth = hovered ? 2.5 : (person.outlineColor ? 2 : 1.5)
   const id = person.id.replace(/\W/g, '')
 
   const { lines, nameCount } = buildLines(person, settings)
@@ -101,7 +101,10 @@ function PersonShape({ person, settings, hovered }: { person: Person; settings: 
     )
   }
 
-  const pts = `${HALF},2 ${NODE_SIZE - 2},${HALF} ${HALF},${NODE_SIZE - 2} 2,${HALF}`
+  // Unknown → triangle (point up); Other (and any unrecognised value) → diamond
+  const pts = person.sex === 'unknown'
+    ? `${HALF},2 ${NODE_SIZE - 2},${NODE_SIZE - 2} 2,${NODE_SIZE - 2}`
+    : `${HALF},2 ${NODE_SIZE - 2},${HALF} ${HALF},${NODE_SIZE - 2} 2,${HALF}`
   return (
     <svg width={NODE_SIZE} height={NODE_SIZE} style={{ display: 'block', overflow: 'visible' }}>
       <defs>

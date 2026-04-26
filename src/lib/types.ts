@@ -1,4 +1,4 @@
-export type Sex = 'male' | 'female' | 'unknown'
+export type Sex = 'male' | 'female' | 'unknown' | 'other'
 export type DateDisplay = 'date' | 'year' | 'age'
 export type NameFormat = 'birth' | 'married' | 'first-only'
 
@@ -44,6 +44,7 @@ export interface Person {
   causeOfDeath?: string
   notes?: string
   dateDisplay?: DateDisplay  // overrides global default when set
+  outlineColor?: string      // hex colour for the shape's outline; falls back to default ink
 }
 
 export interface Relationship {

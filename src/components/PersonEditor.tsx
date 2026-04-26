@@ -14,34 +14,72 @@ const REL_TYPE_LABELS: Partial<Record<RelContextType, string>> = {
   'sibling-of': 'Sibling of',
 }
 
+// Outline-colour palette. Index 0 (#1a1a1a) is the default ink — picking it
+// clears any custom colour rather than persisting the explicit value.
+const OUTLINE_COLORS = [
+  '#1a1a1a', '#64748b', '#dc2626', '#ea580c',
+  '#ca8a04', '#16a34a', '#0d9488', '#0284c7',
+  '#2563eb', '#4f46e5', '#9333ea', '#db2777',
+]
+
 export interface ParentIds {
   fatherId?: string
   motherId?: string
 }
+
+export type AddNextKind = 'spouse' | 'sibling' | 'child' | 'parent'
 
 interface Props {
   person: Person | null
   people?: Person[]
   settings?: Settings
   initialParents?: ParentIds
+  initialRelContext?: RelContext
   getParentsOf?: (personId: string) => ParentIds
   onSave: (person: Person, relContext?: RelContext, parents?: ParentIds) => void
+  onSaveAndAddNext?: (person: Person, relContext: RelContext | undefined, parents: ParentIds, kind: AddNextKind) => void
   onDelete: (id: string) => void
   onClose: () => void
 }
 
 export default function PersonEditor({
   person, people = [], settings = DEFAULT_SETTINGS,
-  initialParents, getParentsOf,
-  onSave, onDelete, onClose,
+  initialParents, initialRelContext, getParentsOf,
+  onSave, onSaveAndAddNext, onDelete, onClose,
 }: Props) {
   const [form, setForm] = useState<Person>(
     person ?? { id: crypto.randomUUID(), firstName: '', lastName: '', sex: 'unknown', deceased: false }
   )
-  const [relType, setRelType] = useState<RelContextType | ''>('')
-  const [relatedPersonId, setRelatedPersonId] = useState('')
+  const [relType, setRelType] = useState<RelContextType | ''>(initialRelContext?.relType ?? '')
+  const [relatedPersonId, setRelatedPersonId] = useState(initialRelContext?.relatedPersonId ?? '')
   const [fatherId, setFatherId] = useState(initialParents?.fatherId ?? '')
   const [motherId, setMotherId] = useState(initialParents?.motherId ?? '')
+  const [saveMenuOpen, setSaveMenuOpen] = useState(false)
+  const saveMenuRef = useRef<HTMLDivElement>(null)
+  const [colorMenuOpen, setColorMenuOpen] = useState(false)
+  const colorMenuRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!saveMenuOpen) return
+    function handle(e: MouseEvent) {
+      if (saveMenuRef.current && !saveMenuRef.current.contains(e.target as HTMLElement)) {
+        setSaveMenuOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handle)
+    return () => document.removeEventListener('mousedown', handle)
+  }, [saveMenuOpen])
+
+  useEffect(() => {
+    if (!colorMenuOpen) return
+    function handle(e: MouseEvent) {
+      if (colorMenuRef.current && !colorMenuRef.current.contains(e.target as HTMLElement)) {
+        setColorMenuOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handle)
+    return () => document.removeEventListener('mousedown', handle)
+  }, [colorMenuOpen])
 
   // Track the last auto-filled married name so we don't overwrite user edits
   const autoFilledRef = useRef<string | undefined>(undefined)
@@ -81,15 +119,27 @@ export default function PersonEditor({
     setForm(f => ({ ...f, [key]: value }))
   }
 
-  function handleSave() {
+  function buildPayload() {
     const relContext: RelContext | undefined =
       relType && relatedPersonId ? { relatedPersonId, relType: relType as RelContextType } : undefined
     const parents: ParentIds = {
       fatherId: fatherId || undefined,
       motherId: motherId || undefined,
     }
+    return { relContext, parents }
+  }
+
+  function handleSave() {
+    const { relContext, parents } = buildPayload()
     onSave(form, relContext, parents)
     onClose()
+  }
+
+  function handleSaveAndAddNext(kind: AddNextKind) {
+    if (!onSaveAndAddNext) return
+    const { relContext, parents } = buildPayload()
+    setSaveMenuOpen(false)
+    onSaveAndAddNext(form, relContext, parents, kind)
   }
 
   const isNew = !person
@@ -102,9 +152,50 @@ export default function PersonEditor({
   return (
     <div style={s.overlay} onClick={e => { if (e.target === e.currentTarget) onClose() }}>
       <div style={s.panel}>
-        <div style={s.header}>
+        <div style={s.headerBar}>
           <h2 style={s.title}>{isNew ? 'Add Person' : 'Edit Person'}</h2>
-          <button style={s.closeBtn} onClick={onClose}>✕</button>
+          <div style={s.headerActions}>
+            <div ref={colorMenuRef} style={s.colorWrap}>
+              <button
+                type="button"
+                style={{
+                  ...s.swatch,
+                  background: form.outlineColor ?? '#fff',
+                  borderColor: form.outlineColor ?? '#d1d5db',
+                }}
+                onClick={() => setColorMenuOpen(o => !o)}
+                title="Outline colour"
+                aria-label="Choose outline colour"
+              />
+              {colorMenuOpen && (
+                <div style={s.colorMenu}>
+                  <div style={s.colorGrid}>
+                    {OUTLINE_COLORS.map(c => {
+                      const selected = c === (form.outlineColor ?? OUTLINE_COLORS[0])
+                      return (
+                        <button
+                          key={c}
+                          type="button"
+                          style={{
+                            ...s.colorCell,
+                            background: c,
+                            boxShadow: selected ? '0 0 0 2px #fff, 0 0 0 4px #1a1a1a' : undefined,
+                          }}
+                          onClick={() => {
+                            setForm(f => ({ ...f, outlineColor: c === OUTLINE_COLORS[0] ? undefined : c }))
+                            setColorMenuOpen(false)
+                          }}
+                          aria-label={`Set outline colour ${c}`}
+                          title={c}
+                        />
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+            <button style={s.closeBtn} onClick={onClose} aria-label="Close">✕</button>
+          </div>
         </div>
 
         {/* Position in tree — new persons only (no "Child of" — use Parents section below) */}
@@ -188,7 +279,8 @@ export default function PersonEditor({
           <select style={s.input} value={form.sex} onChange={e => set('sex', e.target.value as Sex)}>
             <option value="male">Male (□)</option>
             <option value="female">Female (○)</option>
-            <option value="unknown">Unknown (◇)</option>
+            <option value="unknown">Unknown (△)</option>
+            <option value="other">Other (◇)</option>
           </select>
         </label>
 
@@ -235,7 +327,27 @@ export default function PersonEditor({
           {person && (
             <button style={s.deleteBtn} onClick={() => { onDelete(form.id); onClose() }}>Delete</button>
           )}
-          <button style={s.saveBtn} onClick={handleSave}>Save</button>
+          {isNew && onSaveAndAddNext ? (
+            <div ref={saveMenuRef} style={s.saveSplit}>
+              <button style={s.saveMain} onClick={handleSave}>Save</button>
+              <button
+                style={s.saveCaret}
+                onClick={() => setSaveMenuOpen(o => !o)}
+                title="Save and add another related person"
+                aria-label="Save and add another"
+              >▾</button>
+              {saveMenuOpen && (
+                <div style={s.saveMenu}>
+                  <button style={s.saveMenuItem} onClick={() => handleSaveAndAddNext('spouse')}>Save &amp; add spouse</button>
+                  <button style={s.saveMenuItem} onClick={() => handleSaveAndAddNext('sibling')}>Save &amp; add sibling</button>
+                  <button style={s.saveMenuItem} onClick={() => handleSaveAndAddNext('child')}>Save &amp; add child</button>
+                  <button style={s.saveMenuItem} onClick={() => handleSaveAndAddNext('parent')}>Save &amp; add parent</button>
+                </div>
+              )}
+            </div>
+          ) : (
+            <button style={s.saveBtn} onClick={handleSave}>Save</button>
+          )}
         </div>
       </div>
     </div>
@@ -278,9 +390,24 @@ function ParentOptions({ people, excludeId, primarySex }: {
 const s: Record<string, React.CSSProperties> = {
   overlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 },
   panel: { background: '#fff', borderRadius: 10, padding: 24, width: 420, maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 8px 32px rgba(0,0,0,0.18)', display: 'flex', flexDirection: 'column', gap: 12 },
-  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
-  title: { margin: 0, fontSize: 18, fontWeight: 600, fontFamily: 'sans-serif' },
-  closeBtn: { background: 'none', border: 'none', fontSize: 18, cursor: 'pointer', color: '#666' },
+  headerBar: {
+    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+    background: '#f9fafb', borderBottom: '1px solid #e5e7eb',
+    padding: '12px 16px', margin: '-24px -24px 0',
+    borderRadius: '10px 10px 0 0',
+  },
+  headerActions: { display: 'flex', alignItems: 'center', gap: 10 },
+  title: { margin: 0, fontSize: 16, fontWeight: 600, fontFamily: 'sans-serif', color: '#1a1a1a' },
+  closeBtn: { background: 'none', border: 'none', fontSize: 18, cursor: 'pointer', color: '#666', padding: 0, lineHeight: 1 },
+  colorWrap: { position: 'relative', display: 'inline-flex' },
+  swatch: { width: 22, height: 22, borderRadius: 6, border: '1px solid', cursor: 'pointer', padding: 0 },
+  colorMenu: {
+    position: 'absolute', top: 'calc(100% + 6px)', right: 0,
+    background: '#fff', border: '1px solid #e5e7eb', borderRadius: 8,
+    boxShadow: '0 6px 20px rgba(0,0,0,0.12)', zIndex: 200, padding: 8,
+  },
+  colorGrid: { display: 'grid', gridTemplateColumns: 'repeat(4, 22px)', gap: 6 },
+  colorCell: { width: 22, height: 22, borderRadius: 6, border: 'none', cursor: 'pointer', padding: 0 },
   relSection: { display: 'flex', flexDirection: 'column', gap: 6, background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 8, padding: '10px 12px' },
   sectionLabel: { fontSize: 12, fontWeight: 600, fontFamily: 'sans-serif', color: '#6b7280', textTransform: 'uppercase' as const, letterSpacing: '0.05em' },
   relRow: { display: 'flex', gap: 8 },
@@ -290,4 +417,9 @@ const s: Record<string, React.CSSProperties> = {
   actions: { display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 4 },
   saveBtn: { padding: '8px 20px', background: '#1a1a1a', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 14, fontFamily: 'sans-serif' },
   deleteBtn: { padding: '8px 20px', background: '#fff', color: '#dc2626', border: '1px solid #dc2626', borderRadius: 6, cursor: 'pointer', fontSize: 14, fontFamily: 'sans-serif' },
+  saveSplit: { position: 'relative', display: 'inline-flex' },
+  saveMain: { padding: '8px 20px', background: '#1a1a1a', color: '#fff', border: 'none', borderRadius: '6px 0 0 6px', cursor: 'pointer', fontSize: 14, fontFamily: 'sans-serif' },
+  saveCaret: { padding: '8px 10px', background: '#1a1a1a', color: '#fff', border: 'none', borderLeft: '1px solid rgba(255,255,255,0.18)', borderRadius: '0 6px 6px 0', cursor: 'pointer', fontSize: 12, fontFamily: 'sans-serif', lineHeight: 1 },
+  saveMenu: { position: 'absolute', bottom: 'calc(100% + 5px)', right: 0, minWidth: 200, background: '#fff', border: '1px solid #e5e7eb', borderRadius: 8, boxShadow: '0 6px 20px rgba(0,0,0,0.1)', zIndex: 200, padding: '4px 0' },
+  saveMenuItem: { display: 'block', width: '100%', textAlign: 'left', padding: '7px 14px', border: 'none', cursor: 'pointer', background: 'transparent', color: '#1a1a1a', fontSize: 13, fontFamily: 'sans-serif' },
 }

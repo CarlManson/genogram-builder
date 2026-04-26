@@ -25,7 +25,8 @@ function nameLines(person: Person, settings: Settings): string[] {
 function renderPersonSymbol(person: Person, pos: { x: number; y: number }, settings: Settings): string {
   const cx = pos.x + HALF
   const cy = pos.y + HALF
-  const stroke = '#1a1a1a'
+  const stroke = person.outlineColor ?? '#1a1a1a'
+  const strokeWidth = person.outlineColor ? 2 : 1.5
   const fill = person.deceased ? '#e5e5e5' : '#fff'
 
   const nameOnly = nameLines(person, settings)
@@ -50,16 +51,19 @@ function renderPersonSymbol(person: Person, pos: { x: number; y: number }, setti
   let textClip = ''
 
   if (person.sex === 'male') {
-    shape = `<rect x="${pos.x + 1}" y="${pos.y + 1}" width="${NODE_SIZE - 2}" height="${NODE_SIZE - 2}" rx="2" fill="${fill}" stroke="${stroke}" stroke-width="1.5"/>`
+    shape = `<rect x="${pos.x + 1}" y="${pos.y + 1}" width="${NODE_SIZE - 2}" height="${NODE_SIZE - 2}" rx="2" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}"/>`
     shapeClip = `<rect x="${pos.x + 1}" y="${pos.y + 1}" width="${NODE_SIZE - 2}" height="${NODE_SIZE - 2}"/>`
     textClip = `<rect x="${pos.x + 3}" y="${pos.y + 3}" width="${NODE_SIZE - 6}" height="${NODE_SIZE - 6}"/>`
   } else if (person.sex === 'female') {
-    shape = `<circle cx="${cx}" cy="${cy}" r="${HALF - 1}" fill="${fill}" stroke="${stroke}" stroke-width="1.5"/>`
+    shape = `<circle cx="${cx}" cy="${cy}" r="${HALF - 1}" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}"/>`
     shapeClip = `<circle cx="${cx}" cy="${cy}" r="${HALF - 1}"/>`
     textClip = `<circle cx="${cx}" cy="${cy}" r="${HALF - 4}"/>`
   } else {
-    const pts = `${cx},${pos.y + 2} ${pos.x + NODE_SIZE - 2},${cy} ${cx},${pos.y + NODE_SIZE - 2} ${pos.x + 2},${cy}`
-    shape = `<polygon points="${pts}" fill="${fill}" stroke="${stroke}" stroke-width="1.5"/>`
+    // Unknown → triangle (point up); Other (and any unrecognised value) → diamond
+    const pts = person.sex === 'unknown'
+      ? `${cx},${pos.y + 2} ${pos.x + NODE_SIZE - 2},${pos.y + NODE_SIZE - 2} ${pos.x + 2},${pos.y + NODE_SIZE - 2}`
+      : `${cx},${pos.y + 2} ${pos.x + NODE_SIZE - 2},${cy} ${cx},${pos.y + NODE_SIZE - 2} ${pos.x + 2},${cy}`
+    shape = `<polygon points="${pts}" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}"/>`
     shapeClip = `<polygon points="${pts}"/>`
     textClip = `<polygon points="${pts}"/>`
   }

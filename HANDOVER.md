@@ -6,7 +6,7 @@
 
 ## What this is
 
-A browser-based genogram builder. A genogram is a clinical/family diagram that shows people as shapes (square = male, circle = female, diamond = unknown/other) connected by relationship lines. It's used in counselling, social work, and family history.
+A browser-based genogram builder. A genogram is a clinical/family diagram that shows people as shapes (square = male, circle = female, triangle = unknown, diamond = other) connected by relationship lines. It's used in counselling, social work, and family history.
 
 The app runs entirely in the browser — no server, no backend.
 
@@ -79,13 +79,25 @@ src/
 │   ├── ProjectManager.tsx          Modal: list/create/rename/delete genogram projects.
 │   ├── WelcomeModal.tsx            Modal: shown once on first visit (gated by localStorage key
 │   │                               `genogram-builder-welcome-seen-v1`). Brief intro + how-to +
-│   │                               link to GitHub Issues for feedback.
+│   │                               mailto link for feedback.
+│   ├── SelectionToolbar.tsx        Floating toolbar above selected node(s). Sibling of
+│   │                               <ReactFlow> inside <ReactFlowProvider>; uses useNodes() +
+│   │                               useViewport() to position itself in screen space.
+│   │                               1 selected → Edit, Clean up descendants, Delete.
+│   │                               2+ selected → Align horizontal, Align vertical, Delete.
+│   │                               Icons via lucide-react.
 │   └── RelationshipEdge.tsx        Unused in practice (edges={[]} in ReactFlow), kept for possible future use.
 │
 └── lib/
     ├── autoLayout.ts               Smart layout engine. autoLayout(people, relationships) →
     │                               nodePositions. Algorithm:
-    │                               (1) BFS max-depth generation assignment from roots;
+    │                               (1) BFS max-depth generation assignment from roots, then
+    │                                   a fixed-point pass that enforces "spouses share a
+    │                                   generation" (equalise to max within each couple) and
+    │                                   "child = parent ± 1" in BOTH directions (so a
+    │                                   cross-family marriage drags the side-tree's ancestors
+    │                                   down with it instead of leaving them stranded above
+    │                                   their now-deeper descendants);
     │                               (2) connected-components via spouse links → "couple units";
     │                               (3) effectiveBW() — dynamic block widths computed against a
     │                                   placedUnits set, so cross-family marriages (person A from
@@ -121,7 +133,7 @@ interface Person {
   middleName?: string
   lastName: string          // birth surname
   marriedName?: string      // married surname (optional)
-  sex: 'male' | 'female' | 'unknown'
+  sex: 'male' | 'female' | 'unknown' | 'other'
   birthDate?: string        // ISO "YYYY-MM-DD" or year string "YYYY"
   deathDate?: string
   deceased: boolean
@@ -129,6 +141,10 @@ interface Person {
   causeOfDeath?: string
   notes?: string
   dateDisplay?: 'date' | 'year' | 'age'   // overrides global default when set
+  outlineColor?: string                   // hex; overrides default ink for the shape outline.
+                                          // Set via the colour swatch in the Person editor header bar
+                                          // (12-colour palette in PersonEditor.tsx:OUTLINE_COLORS).
+                                          // Honoured by both PersonNode (canvas) and exportSvg.
 }
 
 interface Project {
@@ -188,6 +204,16 @@ A setting allows selecting a "Focal Person". If enabled, a blue dashed ellipse i
 ### GEDCOM import
 Parses `.ged` files manually (no library). Extracts INDI and FAM records. `buildGenogramFromGedcom()` does a BFS from a chosen start person, collecting ancestors (`generationsAbove` levels) and descendants (`generationsBelow` levels). Siblings at each ancestor level are also collected, with their descendants included. After extraction, `autoLayout()` is called to produce initial positions.
 
+### Smart positioning of new persons (`getSmartPositionFor` in `App.tsx`)
+When a new person is added via the editor, position is picked by priority:
+1. **Spouse** (relContext = `spouse`) — sits to the right of the spouse's couple network at the spouse's y.
+2. **Sibling** (relContext = `sibling-of`) — sits right of the sibling's known siblings on their row.
+3. **Parents** (Father/Mother selected) — `positionFromParents()`: if the parents already have children, sit right of the rightmost on their row; otherwise drop one row below the parents' midpoint. This is the only path used by "Save & add child" (which seeds the just-saved person into the appropriate parent slot rather than using a `child-of` relContext).
+4. **Parent-of** (relContext = `parent-of`) — places the new person right of the related person's other parents, or one row above if none.
+5. Random fallback only when no anchor exists.
+
+The Save split-button in the Person editor offers Save & add **spouse / sibling / child / parent**, each routed through `handleSaveAndAddNext` in `App.tsx`, which saves the current person, builds a seed (relContext or parents), bumps the editor's key to force remount, and reopens for the next person.
+
 ### Undo / Redo
 Implemented as two stacks of `GenogramData` snapshots in `App.tsx` state (`undoStack`, `redoStack`), capped at 50 entries each.
 
@@ -209,7 +235,9 @@ Keyboard shortcuts: `⌘Z` / `Ctrl+Z` (undo), `⌘⇧Z` / `Ctrl+Y` (redo). Regis
 | Hover couple line | All lines in the family group turn blue. Location label also highlights. |
 | Double-click a person node | Opens PersonEditor |
 | Double-click a couple line | Opens RelationshipEditor for that relationship. Large transparent hit area (24px wide) makes this easier. |
-| Delete key | Deletes selected node (React Flow built-in) |
+| Click a person | Selects it (React Flow native). A floating SelectionToolbar appears above with Edit / Clean up descendants / Delete. |
+| **Shift+click** another person | Adds to multi-selection. Toolbar switches to Align horizontal / Align vertical / Delete. |
+| Delete key | Deletes selected node(s). Intercepted in `handleNodesChange` so a snapshot is taken first (undo restores them) and `people`/`relationships` get cleaned up alongside the React Flow node state. |
 | **+ Person** button | Opens PersonEditor. If other people exist, shows "Position in tree" section: pick Spouse of / Parent of / Sibling of + select person. Auto-places new node and creates the relationship. |
 | **⌘Z / Ctrl+Z** | Undo |
 | **⌘⇧Z / Ctrl+Y** | Redo |
@@ -252,7 +280,8 @@ Export filenames use the project name (illegal filesystem characters replaced wi
 |---|---|
 | Square | Male |
 | Circle | Female |
-| Diamond | Unknown / other |
+| Triangle (point up) | Unknown |
+| Diamond | Other |
 | Shape filled grey + X cross | Deceased |
 | Solid horizontal line | Married |
 | Dashed horizontal line | Cohabiting |

@@ -107,7 +107,7 @@ export default function GedcomImport({ onImport, onClose }: Props) {
                     }}
                     onClick={() => setStartId(p.id)}
                   >
-                    <span style={sexBadgeStyle(p.sex)}>{p.sex === 'male' ? '□' : p.sex === 'female' ? '○' : '◇'}</span>
+                    <span style={sexBadgeStyle(p.sex)}>{p.sex === 'male' ? '□' : p.sex === 'female' ? '○' : '△'}</span>
                     <span>{p.fullName || '(no name)'}</span>
                     {p.birthDate && <span style={{ color: '#666', fontSize: 12 }}>{p.birthDate.slice(0, 4)}</span>}
                   </div>

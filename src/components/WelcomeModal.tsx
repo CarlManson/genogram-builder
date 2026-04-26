@@ -25,9 +25,9 @@ export default function WelcomeModal({ onClose }: Props) {
 
         <p style={s.note}>
           I built this for myself, so it's not perfect — if you spot a bug or have
-          suggestions, please reach out via the{' '}
-          <a href="https://github.com/CarlManson/genogram-builder/issues" target="_blank" rel="noreferrer" style={s.link}>
-            GitHub repo
+          suggestions, please {' '}
+          <a href="mailto:carl.manson@westnet.com.au" style={s.link}>
+            reach out
           </a>.
         </p>
 

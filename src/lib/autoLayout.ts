@@ -72,9 +72,6 @@ export function autoLayout(
   // Fallback for disconnected nodes
   for (const p of people) if (!gen.has(p.id)) gen.set(p.id, 0)
 
-  // Normalise so the oldest generation = 0
-  const minG = Math.min(...gen.values())
-  for (const [id, g] of gen) gen.set(id, g - minG)
   // ── Build couple units (connected components via spouse links) ──────────
   // unitOf[id] → the array that is this person's couple unit
   const unitOf   = new Map<string, string[]>()
@@ -97,6 +94,50 @@ export function autoLayout(
     for (const id of unit) unitOf.set(id, unit)
     allUnits.push(unit)
   }
+
+  // ── Generation fixed-point ──────────────────────────────────────────────
+  // BFS alone doesn't enforce the two invariants together: spouses can end
+  // up at different generations (the BFS spouse rule only propagates to an
+  // unseen partner), and once a parent's generation is bumped up via a
+  // longer ancestral path, its children's generations aren't re-propagated.
+  // The visible symptom is "children rendered above their parents" in
+  // complex trees with cross-family marriages. Fix: iterate
+  //   1. equalise spouses to max within each couple unit, and
+  //   2. push every child to ≥ parent + 1
+  // until stable. Generations only increase, so this converges quickly.
+  let changed = true
+  while (changed) {
+    changed = false
+    for (const unit of allUnits) {
+      let maxG = 0
+      for (const id of unit) {
+        const g = gen.get(id) ?? 0
+        if (g > maxG) maxG = g
+      }
+      for (const id of unit) {
+        if ((gen.get(id) ?? 0) < maxG) { gen.set(id, maxG); changed = true }
+      }
+    }
+    for (const r of relationships) {
+      if (r.type !== 'parent-child') continue
+      if (!ids.has(r.sourceId) || !ids.has(r.targetId)) continue
+      const pg = gen.get(r.sourceId) ?? 0
+      const cg = gen.get(r.targetId) ?? 0
+      // Forward: child must be ≥ parent + 1.
+      if (cg < pg + 1) { gen.set(r.targetId, pg + 1); changed = true }
+      // Backward: if a child has been pushed deeper than parent + 1 (typically by
+      // spouse equalisation pulling them down a row), pull the parent down to
+      // child − 1 so the generation gap stays at 1. Without this, a side-family's
+      // ancestors get stranded several rows above their now-deeper descendants.
+      const cgNow = gen.get(r.targetId) ?? 0
+      if (pg < cgNow - 1) { gen.set(r.sourceId, cgNow - 1); changed = true }
+    }
+  }
+
+  // Normalise so the oldest generation = 0 (no-op when BFS started at 0;
+  // kept explicit so future changes don't silently break y-positioning).
+  const minG = Math.min(...gen.values())
+  if (minG !== 0) for (const [id, g] of gen) gen.set(id, g - minG)
 
   // ── Find child units for a given unit ───────────────────────────────────
   // Only include a child if AT LEAST ONE of its parents is in this unit,

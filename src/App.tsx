@@ -8,16 +8,18 @@ import {
   useNodesState,
   Node,
   NodeMouseHandler,
+  OnNodesChange,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 
 import PersonNode from './components/PersonNode'
 import GenogramConnections from './components/GenogramConnections'
-import PersonEditor from './components/PersonEditor'
+import PersonEditor, { AddNextKind } from './components/PersonEditor'
 import RelationshipEditor from './components/RelationshipEditor'
 import GedcomImport from './components/GedcomImport'
 import SettingsPanel from './components/SettingsPanel'
 import ProjectManager from './components/ProjectManager'
+import SelectionToolbar from './components/SelectionToolbar'
 import WelcomeModal from './components/WelcomeModal'
 import { Person, Relationship, GenogramData, Settings, DEFAULT_SETTINGS, RelContext, Project } from './lib/types'
 import type { ParentIds } from './components/PersonEditor'
@@ -65,6 +67,7 @@ export default function App() {
   })
 
   const [editPerson, setEditPerson] = useState<Person | null | 'new'>(null)
+  const [newPersonSeed, setNewPersonSeed] = useState<{ relContext?: RelContext; parents?: ParentIds; key: number } | null>(null)
   const [editRel, setEditRel] = useState<Relationship | null | 'new'>(null)
   const [showGedcom, setShowGedcom] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
@@ -437,6 +440,46 @@ export default function App() {
     return { x: x + NW, y }
   }
 
+  // Position a new person whose parent set is given (any of these IDs counts as a parent).
+  // If the parents already have children, sit beside the rightmost on their row;
+  // otherwise drop one row below the parents' midpoint.
+  function positionFromParents(parentIds: string[]): { x: number; y: number } {
+    const NW = 200
+    const NH = 160
+    const parentNodes = nodes.filter(n => parentIds.includes(n.id))
+    if (parentNodes.length === 0) return { x: Math.random() * 400, y: Math.random() * 200 }
+
+    const childIds = new Set<string>()
+    for (const r of relationships) {
+      if (r.type === 'parent-child' && parentIds.includes(r.sourceId)) childIds.add(r.targetId)
+    }
+    const childNodes = nodes.filter(n => childIds.has(n.id))
+    if (childNodes.length > 0) {
+      const maxX = Math.max(...childNodes.map(n => n.position.x))
+      const avgY = childNodes.reduce((s, n) => s + n.position.y, 0) / childNodes.length
+      return { x: maxX + NW, y: avgY }
+    }
+
+    const midX = parentNodes.reduce((s, n) => s + n.position.x, 0) / parentNodes.length
+    const maxY = Math.max(...parentNodes.map(n => n.position.y))
+    return { x: midX, y: maxY + NH }
+  }
+
+  // Pick the best position for a brand-new person given the editor context.
+  // Priority: spouse > sibling > parents > parent-of > random fallback. Spouse and
+  // sibling override the parents arg because they pin the new person to a specific
+  // row alongside someone already placed; parents only dictate position when no
+  // such row anchor exists.
+  function getSmartPositionFor(relContext: RelContext | undefined, parents: ParentIds): { x: number; y: number } {
+    if (relContext?.relatedPersonId && (relContext.relType === 'spouse' || relContext.relType === 'sibling-of')) {
+      return getSmartPosition(relContext)
+    }
+    const parentIds = [parents.fatherId, parents.motherId].filter(Boolean) as string[]
+    if (parentIds.length > 0) return positionFromParents(parentIds)
+    if (relContext?.relatedPersonId) return getSmartPosition(relContext)
+    return { x: Math.random() * 400, y: Math.random() * 200 }
+  }
+
   function getParentsOf(personId: string): ParentIds {
     const parentIds = relationships
       .filter(r => r.type === 'parent-child' && r.targetId === personId)
@@ -455,7 +498,7 @@ export default function App() {
     setPeople(ps => exists ? ps.map(p => p.id === person.id ? person : p) : [...ps, person])
 
     if (!exists) {
-      const pos = relContext ? getSmartPosition(relContext) : { x: Math.random() * 400, y: Math.random() * 200 }
+      const pos = getSmartPositionFor(relContext, parents ?? {})
       setNodes(ns => [...ns, { id: person.id, type: 'person', position: pos, data: { person } }])
 
       if (relContext?.relatedPersonId) {
@@ -491,11 +534,119 @@ export default function App() {
     }
   }
 
+  function handleSaveAndAddNext(person: Person, relContext: RelContext | undefined, parents: ParentIds, kind: AddNextKind) {
+    savePerson(person, relContext, parents)
+
+    let nextRelContext: RelContext | undefined
+    let nextParents: ParentIds | undefined
+    if (kind === 'spouse') {
+      nextRelContext = { relatedPersonId: person.id, relType: 'spouse' }
+    } else if (kind === 'sibling') {
+      nextRelContext = { relatedPersonId: person.id, relType: 'sibling-of' }
+    } else if (kind === 'parent') {
+      nextRelContext = { relatedPersonId: person.id, relType: 'parent-of' }
+    } else if (kind === 'child') {
+      // Place the just-saved person in the appropriate parent slot of the new person.
+      // Female → mother slot; male/unknown/other → father slot (the user can adjust).
+      nextParents = person.sex === 'female' ? { motherId: person.id } : { fatherId: person.id }
+    }
+
+    setNewPersonSeed(prev => ({ relContext: nextRelContext, parents: nextParents, key: (prev?.key ?? 0) + 1 }))
+    setEditPerson('new')
+  }
+
   function deletePerson(id: string) {
     snapshot()
     setPeople(ps => ps.filter(p => p.id !== id))
     setRelationships(rs => rs.filter(r => r.sourceId !== id && r.targetId !== id))
     setNodes(ns => ns.filter(n => n.id !== id))
+  }
+
+  function deletePeople(ids: string[]) {
+    if (ids.length === 0) return
+    snapshot()
+    const idSet = new Set(ids)
+    setPeople(ps => ps.filter(p => !idSet.has(p.id)))
+    setRelationships(rs => rs.filter(r => !idSet.has(r.sourceId) && !idSet.has(r.targetId)))
+    setNodes(ns => ns.filter(n => !idSet.has(n.id)))
+  }
+
+  // Intercept React Flow change events. We need to take a snapshot BEFORE the
+  // remove is applied (so undo restores the deleted nodes) and sync `people`/
+  // `relationships` since React Flow only owns the canvas nodes, not our data.
+  // Selection/position/dimension changes are forwarded untouched.
+  const handleNodesChange = useCallback<OnNodesChange>((changes) => {
+    const removeIds = changes.filter(c => c.type === 'remove').map(c => (c as { id: string }).id)
+    if (removeIds.length > 0) {
+      snapshotFnRef.current()
+      const idSet = new Set(removeIds)
+      setPeople(ps => ps.filter(p => !idSet.has(p.id)))
+      setRelationships(rs => rs.filter(r => !idSet.has(r.sourceId) && !idSet.has(r.targetId)))
+    }
+    onNodesChange(changes)
+  }, [onNodesChange])
+
+  function alignSelectedHorizontal(ids: string[]) {
+    if (ids.length < 2) return
+    snapshot()
+    const idSet = new Set(ids)
+    const sel = nodes.filter(n => idSet.has(n.id))
+    const targetY = Math.min(...sel.map(n => n.position.y))
+    setNodes(ns => ns.map(n => idSet.has(n.id) ? { ...n, position: { ...n.position, y: targetY } } : n))
+  }
+
+  function alignSelectedVertical(ids: string[]) {
+    if (ids.length < 2) return
+    snapshot()
+    const idSet = new Set(ids)
+    const sel = nodes.filter(n => idSet.has(n.id))
+    const targetX = Math.min(...sel.map(n => n.position.x))
+    setNodes(ns => ns.map(n => idSet.has(n.id) ? { ...n, position: { ...n.position, x: targetX } } : n))
+  }
+
+  function cleanUpDescendants(personId: string) {
+    // Collect descendants via parent-child links.
+    const descendants = new Set<string>()
+    const queue = [personId]
+    while (queue.length > 0) {
+      const id = queue.shift()!
+      for (const r of relationships) {
+        if (r.type === 'parent-child' && r.sourceId === id && !descendants.has(r.targetId)) {
+          descendants.add(r.targetId)
+          queue.push(r.targetId)
+        }
+      }
+    }
+    if (descendants.size === 0) return
+
+    // Spouses of descendants move with them so couple lines stay coherent;
+    // the focal person itself never moves.
+    const movable = new Set(descendants)
+    for (const id of descendants) {
+      const network = getCoupleNetwork(id)
+      for (const partnerId of network) {
+        if (partnerId !== personId) movable.add(partnerId)
+      }
+    }
+
+    const newPositions = autoLayout(people, relationships)
+    const selectedNew = newPositions[personId]
+    const selectedCur = nodes.find(n => n.id === personId)?.position
+    if (!selectedNew || !selectedCur) return
+    const offsetX = selectedCur.x - selectedNew.x
+    const offsetY = selectedCur.y - selectedNew.y
+
+    snapshot()
+    setNodes(ns => ns.map(n =>
+      movable.has(n.id) && newPositions[n.id]
+        ? { ...n, position: { x: newPositions[n.id].x + offsetX, y: newPositions[n.id].y + offsetY } }
+        : n
+    ))
+  }
+
+  function handleEditFromToolbar(id: string) {
+    const person = people.find(p => p.id === id)
+    if (person) setEditPerson(person)
   }
 
   function saveRelationship(rel: Relationship) {
@@ -648,7 +799,8 @@ export default function App() {
       <div style={legend}>
         <LegendItem label="Male" shape="square" />
         <LegendItem label="Female" shape="circle" />
-        <LegendItem label="Unknown" shape="diamond" />
+        <LegendItem label="Unknown" shape="triangle" />
+        <LegendItem label="Other" shape="diamond" />
         <LegendItem label="Deceased" shape="filled" />
         <span style={divider} />
         <LegendItem label="Married" line="solid" />
@@ -679,7 +831,7 @@ export default function App() {
               <ReactFlow
                 nodes={nodes}
                 edges={[]}
-                onNodesChange={onNodesChange}
+                onNodesChange={handleNodesChange}
                 onNodeDoubleClick={onNodeDoubleClick}
                 onNodeDragStart={onNodeDragStart}
                 onNodeDrag={onNodeDrag}
@@ -687,6 +839,7 @@ export default function App() {
                 nodeTypes={nodeTypes}
                 fitView
                 deleteKeyCode="Delete"
+                multiSelectionKeyCode="Shift"
               >
                 <Background color="#e5e5e5" gap={20} />
                 <Controls />
@@ -695,6 +848,13 @@ export default function App() {
               <GenogramConnections
                 relationships={relationships}
                 onCoupleDoubleClick={openRelationshipEditor}
+              />
+              <SelectionToolbar
+                onEdit={handleEditFromToolbar}
+                onDelete={deletePeople}
+                onCleanDescendants={cleanUpDescendants}
+                onAlignHorizontal={alignSelectedHorizontal}
+                onAlignVertical={alignSelectedVertical}
               />
             </ReactFlowProvider>
           </div>
@@ -721,14 +881,17 @@ export default function App() {
       )}
       {editPerson !== null && (
         <PersonEditor
+          key={editPerson === 'new' ? `new-${newPersonSeed?.key ?? 0}` : editPerson.id}
           person={editPerson === 'new' ? null : editPerson}
           people={people}
           settings={settings}
-          initialParents={editPerson !== 'new' ? getParentsOf(editPerson.id) : undefined}
+          initialParents={editPerson !== 'new' ? getParentsOf(editPerson.id) : newPersonSeed?.parents}
+          initialRelContext={editPerson === 'new' ? newPersonSeed?.relContext : undefined}
           getParentsOf={getParentsOf}
           onSave={savePerson}
+          onSaveAndAddNext={handleSaveAndAddNext}
           onDelete={deletePerson}
-          onClose={() => setEditPerson(null)}
+          onClose={() => { setEditPerson(null); setNewPersonSeed(null) }}
         />
       )}
       {editRel !== null && (
@@ -850,6 +1013,7 @@ function LegendItem({ label, shape, line }: { label: string; shape?: string; lin
       {shape === 'square' && <svg width={14} height={14}><rect x={1} y={1} width={12} height={12} fill="#fff" stroke="#1a1a1a" strokeWidth={1.5} /></svg>}
       {shape === 'circle' && <svg width={14} height={14}><circle cx={7} cy={7} r={6} fill="#fff" stroke="#1a1a1a" strokeWidth={1.5} /></svg>}
       {shape === 'diamond' && <svg width={14} height={14}><polygon points="7,1 13,7 7,13 1,7" fill="#fff" stroke="#1a1a1a" strokeWidth={1.5} /></svg>}
+      {shape === 'triangle' && <svg width={14} height={14}><polygon points="7,1 13,13 1,13" fill="#fff" stroke="#1a1a1a" strokeWidth={1.5} /></svg>}
       {shape === 'filled' && <svg width={14} height={14}><rect x={1} y={1} width={12} height={12} fill="#555" stroke="#1a1a1a" strokeWidth={1.5} /><line x1={1} y1={1} x2={13} y2={13} stroke="#1a1a1a" strokeWidth={1} /><line x1={13} y1={1} x2={1} y2={13} stroke="#1a1a1a" strokeWidth={1} /></svg>}
       {line === 'solid' && <svg width={20} height={10}><line x1={0} y1={5} x2={20} y2={5} stroke="#1a1a1a" strokeWidth={2} /></svg>}
       {line === 'divorced' && <svg width={20} height={14}><line x1={0} y1={7} x2={20} y2={7} stroke="#1a1a1a" strokeWidth={2} /><line x1={7} y1={2} x2={9} y2={12} stroke="#1a1a1a" strokeWidth={2} /><line x1={11} y1={2} x2={13} y2={12} stroke="#1a1a1a" strokeWidth={2} /></svg>}
