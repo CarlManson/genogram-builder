@@ -18,6 +18,7 @@ import RelationshipEditor from './components/RelationshipEditor'
 import GedcomImport from './components/GedcomImport'
 import SettingsPanel from './components/SettingsPanel'
 import ProjectManager from './components/ProjectManager'
+import WelcomeModal from './components/WelcomeModal'
 import { Person, Relationship, GenogramData, Settings, DEFAULT_SETTINGS, RelContext, Project } from './lib/types'
 import type { ParentIds } from './components/PersonEditor'
 import { SettingsContext } from './lib/SettingsContext'
@@ -39,6 +40,7 @@ const LS_LEGACY_KEY = 'genogram-builder-data'
 const LS_PROJECTS_KEY = 'genogram-builder-projects-v1'
 const LS_ACTIVE_ID_KEY = 'genogram-builder-active-id-v1'
 const LS_SETTINGS_KEY = 'genogram-builder-settings'
+const LS_WELCOME_SEEN_KEY = 'genogram-builder-welcome-seen-v1'
 
 interface DragGroup {
   nodeId: string
@@ -67,6 +69,14 @@ export default function App() {
   const [showGedcom, setShowGedcom] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const [showProjects, setShowProjects] = useState(false)
+  const [showWelcome, setShowWelcome] = useState<boolean>(() => {
+    try { return !localStorage.getItem(LS_WELCOME_SEEN_KEY) } catch { return false }
+  })
+
+  function handleCloseWelcome() {
+    setShowWelcome(false)
+    try { localStorage.setItem(LS_WELCOME_SEEN_KEY, '1') } catch { /* ignore */ }
+  }
 
   // --- Undo / Redo ---
   const [undoStack, setUndoStack] = useState<GenogramData[]>([])
@@ -691,7 +701,13 @@ export default function App() {
         )}
       </div>
 
+      {/* Footer */}
+      <div style={footer}>
+        © 2026 Carl Manson. All rights reserved.
+      </div>
+
       {/* Modals */}
+      {showWelcome && <WelcomeModal onClose={handleCloseWelcome} />}
       {showProjects && (
         <ProjectManager
           projects={projects}
@@ -892,6 +908,12 @@ const divider: React.CSSProperties = {
   display: 'inline-block', width: 1, height: 16, background: '#d1d5db', margin: '0 4px',
 }
 const hint: React.CSSProperties = { fontSize: 11, fontFamily: 'sans-serif', color: '#9ca3af' }
+const footer: React.CSSProperties = {
+  display: 'flex', alignItems: 'center', justifyContent: 'center',
+  height: 26, padding: '0 16px', flexShrink: 0,
+  background: '#fff', borderTop: '1px solid #e5e7eb',
+  fontSize: 11, fontFamily: 'sans-serif', color: '#9ca3af',
+}
 const empty: React.CSSProperties = {
   width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
 }

@@ -41,7 +41,7 @@ npm run build     # production build to dist/
 | **@xyflow/react v12** | Interactive canvas (pan/zoom/drag nodes). Used for node positioning only — edges are NOT used from React Flow |
 | **ReactFlowProvider** | Explicitly wraps the canvas in `App.tsx` so `GenogramConnections` (a sibling of `<ReactFlow>`) can use `useNodes()` / `useViewport()` hooks |
 | **Custom SVG overlay** | `GenogramConnections.tsx` renders all relationship lines as an absolutely-positioned SVG sibling of `<ReactFlow>`, at `z-index: 4`. This was necessary because React Flow's edge system can't draw grouped orthogonal genogram lines |
-| **localStorage** | Multi-project storage. Keys: `genogram-builder-projects-v1` (array of Projects), `genogram-builder-active-id-v1`, `genogram-builder-settings`. Legacy key `genogram-builder-data` is migrated on first load. |
+| **localStorage** | Multi-project storage. Keys: `genogram-builder-projects-v1` (array of Projects), `genogram-builder-active-id-v1`, `genogram-builder-settings`, `genogram-builder-welcome-seen-v1` (set to `'1'` after the user dismisses the welcome modal — modal is shown once on first visit only). Legacy key `genogram-builder-data` is migrated on first load. |
 
 ---
 
@@ -77,6 +77,9 @@ src/
 │   ├── GedcomImport.tsx            Drag-drop .ged file → person picker → generation sliders.
 │   ├── SettingsPanel.tsx           Modal: global name format + date display defaults, Focal Person selection.
 │   ├── ProjectManager.tsx          Modal: list/create/rename/delete genogram projects.
+│   ├── WelcomeModal.tsx            Modal: shown once on first visit (gated by localStorage key
+│   │                               `genogram-builder-welcome-seen-v1`). Brief intro + how-to +
+│   │                               link to GitHub Issues for feedback.
 │   └── RelationshipEdge.tsx        Unused in practice (edges={[]} in ReactFlow), kept for possible future use.
 │
 └── lib/
