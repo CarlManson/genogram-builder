@@ -225,7 +225,7 @@ export default function GenogramConnections({ relationships, onCoupleDoubleClick
   }
 
   return (
-    <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', overflow: 'visible', pointerEvents: 'none', zIndex: 4 }}>
+    <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', overflow: 'visible', pointerEvents: 'none', zIndex: 3 }}>
       <g transform={`translate(${vpX},${vpY}) scale(${zoom})`}>
         {visibles}
         {hits}
