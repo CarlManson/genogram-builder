@@ -800,15 +800,15 @@ export default function App() {
           <button style={addBtn} onClick={() => setEditPerson('new')}>+ Person</button>
           <button style={addBtn} onClick={() => setEditRel('new')}>+ Relationship</button>
           <div style={toolbarDivider} />
+          <button style={gearBtn} onClick={() => setShowSettings(true)} title="Settings">⚙</button>
           <button
-            style={gearBtn}
+            style={{ ...gearBtn, color: '#fcbf47' }}
             onClick={() => setShowCoffee(true)}
             title="Buy me a coffee"
             aria-label="Buy me a coffee"
           >
             <Coffee size={17} />
           </button>
-          <button style={gearBtn} onClick={() => setShowSettings(true)} title="Settings">⚙</button>
         </div>
       </div>
 
