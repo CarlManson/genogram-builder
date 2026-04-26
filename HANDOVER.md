@@ -23,6 +23,16 @@ npm run build     # production build to dist/
 
 ---
 
+## Deployment
+
+- **Hosted on:** GitHub Pages, custom domain `genogram-builder.carlmanson.au`.
+- **Pipeline:** `.github/workflows/deploy.yml` runs on every push to `main` — installs deps, runs `npm run build`, uploads `dist/` as a Pages artifact, and deploys via `actions/deploy-pages`.
+- **Pages source must be set to "GitHub Actions"** in repo Settings → Pages (not "Deploy from a branch"). Branch-mode deploys would serve raw source and break.
+- **Custom domain:** `public/CNAME` contains the domain; Vite copies it into `dist/` on build so it survives every redeploy.
+- **DNS:** at Cloudflare, `CNAME genogram-builder → carlmanson.github.io`, **DNS-only (grey cloud)** so GitHub can issue the Let's Encrypt cert. Can be flipped to proxied after HTTPS is enforced.
+
+---
+
 ## Tech stack
 
 | Thing | What / Why |
