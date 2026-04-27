@@ -6,6 +6,7 @@ const NODE_SIZE = 80
 const HALF = NODE_SIZE / 2
 const PAD = 50
 const SIBSHIP_GAP = 28
+const TWIN_APEX_DROP = 12
 
 function escapeXml(str: string): string {
   return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
@@ -276,13 +277,17 @@ function renderFamilies(
               const cx = cp.x + HALF
               lines.push(`<line x1="${cx}" y1="${sibshipY}" x2="${cx}" y2="${cp.y}" stroke="${pc}" stroke-width="${pw}"/>`)
             } else {
+              // Twins among siblings: short stem from the sibship to a wishbone
+              // apex, then V to each twin.
               const cPositions = ids.map(id => positions[id]).filter(Boolean) as { x: number; y: number }[]
               const avgCX = cPositions.reduce((sum, p) => sum + p.x + HALF, 0) / cPositions.length
+              const apexY = sibshipY + TWIN_APEX_DROP
+              lines.push(`<line x1="${avgCX}" y1="${sibshipY}" x2="${avgCX}" y2="${apexY}" stroke="${pc}" stroke-width="${pw}"/>`)
               for (const id of ids) {
                 const cp = positions[id]
                 if (!cp) continue
                 const cx = cp.x + HALF
-                lines.push(`<line x1="${avgCX}" y1="${sibshipY}" x2="${cx}" y2="${cp.y}" stroke="${pc}" stroke-width="${pw}"/>`)
+                lines.push(`<line x1="${avgCX}" y1="${apexY}" x2="${cx}" y2="${cp.y}" stroke="${pc}" stroke-width="${pw}"/>`)
               }
             }
           }

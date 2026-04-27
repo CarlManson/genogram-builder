@@ -7,6 +7,9 @@ import { useSettings } from '../lib/SettingsContext'
 const NW = 80
 const NH = 80
 const SIBSHIP_GAP = 28
+// Twin signal: distance to drop below the sibship line before the V fans out,
+// so the wishbone reads as its own marker instead of a flap on the sibship.
+const TWIN_APEX_DROP = 12
 const HOVER_COLOR = '#3b82f6'
 
 interface Props {
@@ -227,14 +230,17 @@ export default function GenogramConnections({ relationships, onCoupleDoubleClick
               const cx = cp.x + NW / 2
               visibles.push(<line key={`child-${familyKey}-${ids[0]}`} x1={cx} y1={sibshipY} x2={cx} y2={cp.y} stroke={pcColor} strokeWidth={pcWidth} style={{ pointerEvents: 'none' }} />)
             } else {
-              // Twins among siblings: converge at a point on the sibship line.
+              // Twins among siblings: short vertical from the sibship to a
+              // wishbone apex, then V to each twin.
               const cPositions = ids.map(id => posMap.get(id)).filter(Boolean) as { x: number; y: number }[]
               const avgCX = cPositions.reduce((sum, p) => sum + p.x + NW / 2, 0) / cPositions.length
+              const apexY = sibshipY + TWIN_APEX_DROP
+              visibles.push(<line key={`twin-stem-${familyKey}-${ids[0]}`} x1={avgCX} y1={sibshipY} x2={avgCX} y2={apexY} stroke={pcColor} strokeWidth={pcWidth} style={{ pointerEvents: 'none' }} />)
               for (const id of ids) {
                 const cp = posMap.get(id)
                 if (!cp) continue
                 const cx = cp.x + NW / 2
-                visibles.push(<line key={`child-${familyKey}-${id}`} x1={avgCX} y1={sibshipY} x2={cx} y2={cp.y} stroke={pcColor} strokeWidth={pcWidth} style={{ pointerEvents: 'none' }} />)
+                visibles.push(<line key={`child-${familyKey}-${id}`} x1={avgCX} y1={apexY} x2={cx} y2={cp.y} stroke={pcColor} strokeWidth={pcWidth} style={{ pointerEvents: 'none' }} />)
               }
             }
           }
