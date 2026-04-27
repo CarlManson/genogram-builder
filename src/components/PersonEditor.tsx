@@ -201,7 +201,7 @@ export default function PersonEditor({
             <span style={s.sectionLabel}>Position in tree</span>
             <div style={s.relRow}>
               <select
-                style={{ ...s.input, flex: '0 0 auto' }}
+                style={{ ...s.input, flex: '0 0 auto', width: 'auto' }}
                 value={relType}
                 onChange={e => { setRelType(e.target.value as RelContextType | ''); setRelatedPersonId('') }}
               >
@@ -212,7 +212,7 @@ export default function PersonEditor({
               </select>
               {relType && (
                 <select
-                  style={{ ...s.input, flex: 1 }}
+                  style={{ ...s.input, flex: 1, minWidth: 0 }}
                   value={relatedPersonId}
                   onChange={e => setRelatedPersonId(e.target.value)}
                 >
