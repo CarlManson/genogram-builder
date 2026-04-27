@@ -47,11 +47,12 @@ export const DEFAULT_DESIGN: DesignSettings = {
   cropNamesToShape: false,
 }
 
-// Shared palette used by the per-person outline swatch (PersonEditor header)
-// and the global default-outline picker (Settings → Design). Index 0 (default
-// ink) acts as "no override" in PersonEditor.
+// Shared palette used by the per-person outline swatch (PersonEditor header).
+// Index 0 (default ink) acts as "no override" in PersonEditor. Layout assumes
+// a 4-column grid; the first row is greys, rest are chromatic.
 export const OUTLINE_COLORS: readonly string[] = [
-  '#1a1a1a', '#64748b', '#dc2626', '#ea580c',
+  '#1a1a1a', '#52525b', '#71717a', '#a1a1aa',
+  '#d4d4d8', '#64748b', '#dc2626', '#ea580c',
   '#ca8a04', '#16a34a', '#0d9488', '#0284c7',
   '#2563eb', '#4f46e5', '#9333ea', '#db2777',
 ]
