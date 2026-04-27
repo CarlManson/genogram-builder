@@ -29,6 +29,7 @@ import { useIsMobile } from './lib/useIsMobile'
 import { Person, Relationship, GenogramData, Settings, DEFAULT_SETTINGS, DEFAULT_DESIGN, RelContext, Project } from './lib/types'
 import type { ParentIds } from './components/PersonEditor'
 import { SettingsContext } from './lib/SettingsContext'
+import { MoveModeContext } from './lib/MoveModeContext'
 import { exportToSvg } from './lib/exportSvg'
 import { autoLayout } from './lib/autoLayout'
 
@@ -813,6 +814,7 @@ export default function App() {
 
   return (
     <SettingsContext.Provider value={settings}>
+    <MoveModeContext.Provider value={{ moveModeId: moveMode ? lastClickedId : null }}>
     <div style={{ width: '100vw', height: '100vh', display: 'flex', flexDirection: 'column', background: '#1e1e2e' }}>
       {/* Toolbar */}
       <div style={toolbar}>
@@ -1011,6 +1013,7 @@ export default function App() {
         />
       )}
     </div>
+    </MoveModeContext.Provider>
     </SettingsContext.Provider>
   )
 }

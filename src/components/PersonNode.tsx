@@ -3,6 +3,7 @@ import { Handle, Position, NodeProps } from '@xyflow/react'
 import { Person, Settings } from '../lib/types'
 import { personDateLabel } from '../lib/dateUtils'
 import { useSettings } from '../lib/SettingsContext'
+import { useMoveMode } from '../lib/MoveModeContext'
 
 export const NODE_SIZE = 80
 const HALF = NODE_SIZE / 2
@@ -139,20 +140,37 @@ function PersonNode({ data, selected }: NodeProps) {
   const settings = useSettings()
   const design = settings.design
   const [hovered, setHovered] = useState(false)
+  const { moveModeId } = useMoveMode()
+  const inMoveMode = moveModeId === person.id
   const showLabelBelow = !design.cropNamesToShape
   const { lines, nameCount } = buildLines(person, settings)
 
   return (
     <div
-      style={{ position: 'relative', width: NODE_SIZE, cursor: 'pointer' }}
+      style={{ position: 'relative', width: NODE_SIZE, cursor: inMoveMode ? 'ew-resize' : 'pointer' }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
-      {selected && (
+      {(selected || inMoveMode) && (
         <div style={{
           position: 'absolute', top: -3, left: -3, width: NODE_SIZE + 6, height: NODE_SIZE + 6,
-          borderRadius: 4, outline: '2px solid #3b82f6', pointerEvents: 'none',
+          borderRadius: 4,
+          outline: inMoveMode ? '2px dashed #6d7ce5' : '2px solid #3b82f6',
+          pointerEvents: 'none',
         }} />
+      )}
+      {inMoveMode && (
+        <div style={{
+          position: 'absolute', top: -28, left: '50%', transform: 'translateX(-50%)',
+          background: '#6d7ce5', color: '#fff',
+          padding: '3px 8px', borderRadius: 4,
+          fontSize: 10, fontWeight: 600, fontFamily: 'sans-serif',
+          letterSpacing: '0.04em',
+          pointerEvents: 'none', whiteSpace: 'nowrap',
+          boxShadow: '0 2px 6px rgba(0, 0, 0, 0.25)',
+        }}>
+          ↔ SLIDE
+        </div>
       )}
       <PersonShape person={person} settings={settings} hovered={hovered} />
       {showLabelBelow && (
