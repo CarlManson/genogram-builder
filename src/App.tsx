@@ -42,6 +42,11 @@ function genogramToNodes(data: GenogramData): Node[] {
     type: 'person',
     position: data.nodePositions[p.id] ?? { x: 0, y: 0 },
     data: { person: p },
+    // React Flow applies this as z-index on each node wrapper, lifting the
+    // entire node — shape AND its surrounding labels (residence above,
+    // name/dates/occupation/notes below) — above GenogramConnections (z-3)
+    // so relationship lines never paint over the text.
+    zIndex: 10,
   }))
 }
 
@@ -582,7 +587,7 @@ export default function App() {
 
     if (!exists) {
       const pos = getSmartPositionFor(relContext, parents ?? {})
-      setNodes(ns => [...ns, { id: person.id, type: 'person', position: pos, data: { person } }])
+      setNodes(ns => [...ns, { id: person.id, type: 'person', position: pos, data: { person }, zIndex: 10 }])
 
       if (relContext?.relatedPersonId) {
         const newRels: Relationship[] = []
