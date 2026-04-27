@@ -770,7 +770,7 @@ export default function App() {
 
   return (
     <SettingsContext.Provider value={settings}>
-    <div style={{ width: '100vw', height: '100vh', display: 'flex', flexDirection: 'column', background: '#fafaf9' }}>
+    <div style={{ width: '100vw', height: '100vh', display: 'flex', flexDirection: 'column', background: '#1e1e2e' }}>
       {/* Toolbar */}
       <div style={toolbar}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -847,8 +847,8 @@ export default function App() {
         <span style={hint}>Double-click to edit · Drag moves family · Shift+drag slides spouse horizontally</span>
       </div>
 
-      {/* Canvas */}
-      <div style={{ flex: 1 }}>
+      {/* Canvas — explicitly light so the build area stays bright while the chrome above/below is dark */}
+      <div style={{ flex: 1, background: '#fafaf9' }}>
         {people.length === 0 && relationships.length === 0 ? (
           <div style={empty}>
             <div style={emptyBox}>
@@ -1009,8 +1009,9 @@ function FileMenu({ onImportGedcom, onOpenJson, onExportSvg, onSaveJson, onStart
       <button
         style={{
           ...fileMenuTrigger,
-          background: open ? '#f3f4f6' : '#f9fafb',
-          borderColor: open ? '#9ca3af' : '#d1d5db',
+          background: open ? '#45475a' : 'transparent',
+          borderColor: open ? '#6c7086' : '#45475a',
+          color: '#f4f4f5',
         }}
         onClick={() => setOpen(o => !o)}
       >
@@ -1044,54 +1045,70 @@ const fileMenuDropdown: React.CSSProperties = {
 const fileMenuSep: React.CSSProperties = { height: 1, background: '#f3f4f6', margin: '4px 0' }
 
 function LegendItem({ label, shape, line }: { label: string; shape?: string; line?: string }) {
+  // Legend lives in dark chrome, so icons use light strokes / fills, NOT the
+  // canvas convention (dark on white). They're a UI key, not a real genogram.
+  const ink = '#a6adc8'
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, fontFamily: 'sans-serif', color: '#555' }}>
-      {shape === 'square' && <svg width={14} height={14}><rect x={1} y={1} width={12} height={12} fill="#fff" stroke="#1a1a1a" strokeWidth={1.5} /></svg>}
-      {shape === 'circle' && <svg width={14} height={14}><circle cx={7} cy={7} r={6} fill="#fff" stroke="#1a1a1a" strokeWidth={1.5} /></svg>}
-      {shape === 'diamond' && <svg width={14} height={14}><polygon points="7,1 13,7 7,13 1,7" fill="#fff" stroke="#1a1a1a" strokeWidth={1.5} /></svg>}
-      {shape === 'triangle' && <svg width={14} height={14}><polygon points="7,1 13,13 1,13" fill="#fff" stroke="#1a1a1a" strokeWidth={1.5} /></svg>}
-      {shape === 'filled' && <svg width={14} height={14}><rect x={1} y={1} width={12} height={12} fill="#555" stroke="#1a1a1a" strokeWidth={1.5} /><line x1={1} y1={1} x2={13} y2={13} stroke="#1a1a1a" strokeWidth={1} /><line x1={13} y1={1} x2={1} y2={13} stroke="#1a1a1a" strokeWidth={1} /></svg>}
-      {line === 'solid' && <svg width={20} height={10}><line x1={0} y1={5} x2={20} y2={5} stroke="#1a1a1a" strokeWidth={2} /></svg>}
-      {line === 'divorced' && <svg width={20} height={14}><line x1={0} y1={7} x2={20} y2={7} stroke="#1a1a1a" strokeWidth={2} /><line x1={7} y1={2} x2={9} y2={12} stroke="#1a1a1a" strokeWidth={2} /><line x1={11} y1={2} x2={13} y2={12} stroke="#1a1a1a" strokeWidth={2} /></svg>}
-      {line === 'separated' && <svg width={20} height={14}><line x1={0} y1={7} x2={20} y2={7} stroke="#1a1a1a" strokeWidth={2} /><line x1={9} y1={2} x2={11} y2={12} stroke="#1a1a1a" strokeWidth={2} /></svg>}
-      {line === 'dashed' && <svg width={20} height={10}><line x1={0} y1={5} x2={20} y2={5} stroke="#1a1a1a" strokeWidth={2} strokeDasharray="4,3" /></svg>}
-      {line === 'twins' && <svg width={20} height={14}><line x1={10} y1={2} x2={4} y2={12} stroke="#1a1a1a" strokeWidth={1.5} /><line x1={10} y1={2} x2={16} y2={12} stroke="#1a1a1a" strokeWidth={1.5} /></svg>}
+    <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, fontFamily: 'sans-serif', color: ink }}>
+      {shape === 'square' && <svg width={14} height={14}><rect x={1} y={1} width={12} height={12} fill="none" stroke={ink} strokeWidth={1.5} /></svg>}
+      {shape === 'circle' && <svg width={14} height={14}><circle cx={7} cy={7} r={6} fill="none" stroke={ink} strokeWidth={1.5} /></svg>}
+      {shape === 'diamond' && <svg width={14} height={14}><polygon points="7,1 13,7 7,13 1,7" fill="none" stroke={ink} strokeWidth={1.5} /></svg>}
+      {shape === 'triangle' && <svg width={14} height={14}><polygon points="7,1 13,13 1,13" fill="none" stroke={ink} strokeWidth={1.5} /></svg>}
+      {shape === 'filled' && <svg width={14} height={14}><rect x={1} y={1} width={12} height={12} fill={ink} stroke={ink} strokeWidth={1.5} /><line x1={1} y1={1} x2={13} y2={13} stroke="#1e1e2e" strokeWidth={1} /><line x1={13} y1={1} x2={1} y2={13} stroke="#1e1e2e" strokeWidth={1} /></svg>}
+      {line === 'solid' && <svg width={20} height={10}><line x1={0} y1={5} x2={20} y2={5} stroke={ink} strokeWidth={2} /></svg>}
+      {line === 'divorced' && <svg width={20} height={14}><line x1={0} y1={7} x2={20} y2={7} stroke={ink} strokeWidth={2} /><line x1={7} y1={2} x2={9} y2={12} stroke={ink} strokeWidth={2} /><line x1={11} y1={2} x2={13} y2={12} stroke={ink} strokeWidth={2} /></svg>}
+      {line === 'separated' && <svg width={20} height={14}><line x1={0} y1={7} x2={20} y2={7} stroke={ink} strokeWidth={2} /><line x1={9} y1={2} x2={11} y2={12} stroke={ink} strokeWidth={2} /></svg>}
+      {line === 'dashed' && <svg width={20} height={10}><line x1={0} y1={5} x2={20} y2={5} stroke={ink} strokeWidth={2} strokeDasharray="4,3" /></svg>}
+      {line === 'twins' && <svg width={20} height={14}><line x1={10} y1={2} x2={4} y2={12} stroke={ink} strokeWidth={1.5} /><line x1={10} y1={2} x2={16} y2={12} stroke={ink} strokeWidth={1.5} /></svg>}
       {label}
     </div>
   )
 }
 
+// Dark chrome palette. Canvas + modals stay light.
+const C = {
+  bg: '#1e1e2e',
+  bgRaised: '#313244',
+  bgHover: '#45475a',
+  border: '#313244',
+  borderStrong: '#45475a',
+  text: '#ffffff',
+  textSubtle: '#a6adc8',
+  textMuted: '#7f849c',
+  accent: '#6d7ce5',
+}
+
 const toolbar: React.CSSProperties = {
   display: 'flex', alignItems: 'center', padding: '0 16px', height: 50,
-  background: '#fff', borderBottom: '1px solid #e5e7eb', flexShrink: 0,
+  background: C.bg, borderBottom: `1px solid ${C.border}`, flexShrink: 0,
 }
 const logo: React.CSSProperties = {
-  fontFamily: 'sans-serif', fontWeight: 700, fontSize: 15, color: '#1a1a1a', letterSpacing: '-0.01em',
+  fontFamily: 'sans-serif', fontWeight: 700, fontSize: 15, color: C.text, letterSpacing: '-0.01em',
 }
 const projectBadge: React.CSSProperties = {
   display: 'flex', alignItems: 'center', gap: 5, padding: '4px 10px',
-  background: '#f3f4f6', borderRadius: 20, cursor: 'pointer',
+  background: C.bgRaised, borderRadius: 20, cursor: 'pointer',
   border: '1px solid transparent',
 }
-const projectName: React.CSSProperties = { fontSize: 12, fontWeight: 600, color: '#374151', fontFamily: 'sans-serif' }
-const toolbarDivider: React.CSSProperties = { width: 1, height: 20, background: '#e5e7eb', margin: '0 2px' }
+const projectName: React.CSSProperties = { fontSize: 12, fontWeight: 600, color: C.text, fontFamily: 'sans-serif' }
+const toolbarDivider: React.CSSProperties = { width: 1, height: 20, background: C.borderStrong, margin: '0 2px' }
 const undoRedoBtn: React.CSSProperties = {
   padding: '6px 9px', fontSize: 15, fontFamily: 'sans-serif', cursor: 'pointer',
   background: 'transparent', border: '1px solid transparent', borderRadius: 6,
-  color: '#374151', lineHeight: 1,
+  color: C.textSubtle, lineHeight: 1,
 }
 const cleanUpBtn: React.CSSProperties = {
   padding: '6px 12px', fontSize: 13, fontFamily: 'sans-serif', cursor: 'pointer',
-  background: '#f0fdf4', color: '#15803d', border: '1px solid #bbf7d0', borderRadius: 6, fontWeight: 500,
+  background: 'transparent', color: C.accent, border: `1px solid ${C.accent}`, borderRadius: 6, fontWeight: 500,
 }
 const addBtn: React.CSSProperties = {
   padding: '6px 13px', fontSize: 13, fontFamily: 'sans-serif', cursor: 'pointer',
-  background: '#1a1a1a', color: '#fff', border: 'none', borderRadius: 6, fontWeight: 500,
+  background: C.accent, color: C.text, border: 'none', borderRadius: 6, fontWeight: 500,
 }
 const gearBtn: React.CSSProperties = {
   padding: '6px 8px', fontSize: 17, fontFamily: 'sans-serif', cursor: 'pointer',
   background: 'transparent', border: '1px solid transparent', borderRadius: 6,
-  color: '#6b7280', lineHeight: 1,
+  color: C.textSubtle, lineHeight: 1,
   display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
 }
 // Kept for empty-state panel
@@ -1103,17 +1120,17 @@ const btn: React.CSSProperties = {
 const btnPrimary: React.CSSProperties = { ...btn, background: '#1a1a1a', color: '#fff', border: 'none' }
 const legend: React.CSSProperties = {
   display: 'flex', alignItems: 'center', gap: 12, padding: '5px 16px',
-  background: '#f9fafb', borderBottom: '1px solid #e5e7eb', flexShrink: 0, flexWrap: 'wrap',
+  background: C.bg, borderBottom: `1px solid ${C.border}`, flexShrink: 0, flexWrap: 'wrap',
 }
 const divider: React.CSSProperties = {
-  display: 'inline-block', width: 1, height: 16, background: '#d1d5db', margin: '0 4px',
+  display: 'inline-block', width: 1, height: 16, background: C.borderStrong, margin: '0 4px',
 }
-const hint: React.CSSProperties = { fontSize: 11, fontFamily: 'sans-serif', color: '#9ca3af' }
+const hint: React.CSSProperties = { fontSize: 11, fontFamily: 'sans-serif', color: C.textMuted }
 const footer: React.CSSProperties = {
   display: 'flex', alignItems: 'center', justifyContent: 'center',
   height: 26, padding: '0 16px', flexShrink: 0,
-  background: '#fff', borderTop: '1px solid #e5e7eb',
-  fontSize: 11, fontFamily: 'sans-serif', color: '#9ca3af',
+  background: C.bg, borderTop: `1px solid ${C.border}`,
+  fontSize: 11, fontFamily: 'sans-serif', color: C.textMuted,
 }
 const empty: React.CSSProperties = {
   width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
