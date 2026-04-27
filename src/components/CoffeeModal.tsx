@@ -4,15 +4,19 @@ interface Props {
 }
 
 export default function CoffeeModal({ onClose, prompted = false }: Props) {
+  const title = prompted ? 'Enjoying the Genogram Builder?' : 'Buy me a coffee'
+  const body = prompted
+    ? 'If it\'s been useful, consider shouting me a coffee — it helps keep the lights on and the coffee flowing.'
+    : 'Thanks for the support — it helps keep the lights on and the coffee flowing.'
+
   return (
     <div style={s.overlay} onClick={e => { if (e.target === e.currentTarget) onClose() }}>
       <div style={s.panel}>
         <div style={s.header}>
-          <h2 style={s.title}>Thanks for your support.</h2>
+          <h2 style={s.title}>{title}</h2>
           <button style={s.closeBtn} onClick={onClose} aria-label="Close">✕</button>
         </div>
-        {prompted && <p style={s.intro}>It seems you are enjoying the genogram builder…</p>}
-        <p style={s.subtitle}>Helps keep the lights on and the coffee flowing.</p>
+        <p style={s.subtitle}>{body}</p>
         <iframe
           id="kofiframe"
           src="https://ko-fi.com/carlmanson/?hidefeed=true&widget=true&embed=true&preview=true"
@@ -31,6 +35,5 @@ const s: Record<string, React.CSSProperties> = {
   header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
   title: { margin: 0, fontSize: 18, fontWeight: 600, fontFamily: 'sans-serif', color: '#1a1a1a' },
   closeBtn: { background: 'none', border: 'none', fontSize: 18, cursor: 'pointer', color: '#666', padding: 0, lineHeight: 1 },
-  intro: { margin: 0, fontSize: 14, fontFamily: 'sans-serif', color: '#1a1a1a' },
   subtitle: { margin: '0 0 8px', fontSize: 13, fontFamily: 'sans-serif', color: '#6b7280' },
 }
