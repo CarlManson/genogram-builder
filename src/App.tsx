@@ -1201,10 +1201,11 @@ const toolbar: React.CSSProperties = {
   display: 'flex', alignItems: 'center', padding: '8px 12px', minHeight: 50,
   background: C.bg, borderBottom: `1px solid ${C.border}`, flexShrink: 0,
   flexWrap: 'wrap', gap: 6,
-  // Stack above the React Flow renderer (z-4), GenogramConnections (z-3), and
-  // the SelectionToolbar (z-5) so panned-up nodes can't bleed through the
-  // chrome into the header / legend / footer.
-  position: 'relative', zIndex: 10,
+  // Stack above the React Flow renderer (z-4), GenogramConnections (z-3),
+  // and the SelectionToolbar (z-5). The toolbar sits one level higher than
+  // the legend (z-10) so the File dropdown — which is bounded by the
+  // toolbar's own stacking context — can paint OVER the legend below.
+  position: 'relative', zIndex: 11,
 }
 const logo: React.CSSProperties = {
   fontFamily: 'sans-serif', fontWeight: 700, fontSize: 15, color: C.text, letterSpacing: '-0.01em',
