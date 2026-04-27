@@ -24,7 +24,8 @@ import ProjectManager from './components/ProjectManager'
 import SelectionToolbar from './components/SelectionToolbar'
 import WelcomeModal from './components/WelcomeModal'
 import CoffeeModal from './components/CoffeeModal'
-import { Coffee } from 'lucide-react'
+import UserGuideModal from './components/UserGuideModal'
+import { Coffee, HelpCircle } from 'lucide-react'
 import { useIsMobile } from './lib/useIsMobile'
 import { Person, Relationship, GenogramData, Settings, DEFAULT_SETTINGS, DEFAULT_DESIGN, RelContext, Project } from './lib/types'
 import type { ParentIds } from './components/PersonEditor'
@@ -96,6 +97,7 @@ export default function App() {
   const [showProjects, setShowProjects] = useState(false)
   const [showCoffee, setShowCoffee] = useState(false)
   const [coffeeIsPrompt, setCoffeeIsPrompt] = useState(false)
+  const [showGuide, setShowGuide] = useState(false)
   const isMobile = useIsMobile()
 
   // Counter incremented whenever the canvas should re-fit (initial load,
@@ -873,6 +875,14 @@ export default function App() {
             title="Settings"
           >⚙</button>
           <button
+            style={gearBtn}
+            onClick={() => setShowGuide(true)}
+            title="User guide"
+            aria-label="User guide"
+          >
+            <HelpCircle size={17} />
+          </button>
+          <button
             style={{ ...gearBtn, background: '#fcbf47', color: '#fff' }}
             onClick={() => { setCoffeeIsPrompt(false); setShowCoffee(true) }}
             title="Buy me a coffee"
@@ -963,6 +973,7 @@ export default function App() {
       {/* Modals */}
       {showWelcome && <WelcomeModal onClose={handleCloseWelcome} />}
       {showCoffee && <CoffeeModal prompted={coffeeIsPrompt} onClose={() => setShowCoffee(false)} />}
+      {showGuide && <UserGuideModal onClose={() => setShowGuide(false)} />}
       {showProjects && (
         <ProjectManager
           projects={projects}
