@@ -88,8 +88,17 @@ function renderPersonSymbol(person: Person, pos: { x: number; y: number }, setti
     }).join('')
   }
 
-  // Below-shape extras (occupation, cause of death). When labels are below the
-  // shape, push these further down so they don't collide with the name block.
+  // Above-shape extras (residence, prefixed with Lives/Lived in).
+  let above = ''
+  if (person.residence) {
+    const ay = pos.y - 6
+    const verb = person.deceased ? 'Lived in' : 'Lives in'
+    above = `<text x="${cx}" y="${ay}" text-anchor="middle" font-family="sans-serif" font-size="${design.fontSize}" font-style="italic" fill="${design.locationTextColor}">${escapeXml(`${verb} ${person.residence}`)}</text>`
+  }
+
+  // Below-shape extras (occupation, cause of death, notes). When labels are
+  // below the shape, push these further down so they don't collide with the
+  // name block.
   let extra = ''
   const labelOffset = design.cropNamesToShape ? 14 : (labelLines.length * lineH + lineH)
   let yOff = pos.y + NODE_SIZE + labelOffset
@@ -99,9 +108,19 @@ function renderPersonSymbol(person: Person, pos: { x: number; y: number }, setti
   }
   if (person.causeOfDeath) {
     extra += `<text x="${cx}" y="${yOff}" text-anchor="middle" font-family="sans-serif" font-size="${design.fontSize}" fill="${design.causeOfDeathTextColor}" font-style="italic">${escapeXml(person.causeOfDeath)}</text>`
+    yOff += lineH
+  }
+  if (person.notes) {
+    // Notes can be multi-line; split on \n and render each as its own <text>.
+    for (const line of person.notes.split(/\r?\n/)) {
+      if (!line) { yOff += lineH; continue }
+      extra += `<text x="${cx}" y="${yOff}" text-anchor="middle" font-family="sans-serif" font-size="${design.fontSize}" fill="${design.occupationTextColor}">${escapeXml(line)}</text>`
+      yOff += lineH
+    }
   }
 
   return `<defs><clipPath id="${crossClipId}">${shapeClip}</clipPath><clipPath id="${clipId}">${textClip}</clipPath></defs>` +
+    above +
     shape + cross +
     labelSvg +
     extra
@@ -267,12 +286,13 @@ export function exportToSvg(data: GenogramData, settings: Settings = DEFAULT_SET
 
   const xs = Object.values(nodePositions).map(p => p.x)
   const ys = Object.values(nodePositions).map(p => p.y)
-  // When labels render below the shape, reserve enough vertical room for the
-  // name + date lines + occupation/cause-of-death (worst case ~5 lines).
+  // When labels render below the shape, reserve room for name + date lines +
+  // occupation/cause-of-death/notes (worst case ~6 lines). Above the shape we
+  // also need ~lineH for the residence label, plus the existing PAD.
   const lineH = Math.max(12, Math.round(settings.design.fontSize * 1.4))
-  const labelRoom = settings.design.cropNamesToShape ? 40 : (5 * lineH + 10)
+  const labelRoom = settings.design.cropNamesToShape ? 40 : (6 * lineH + 10)
   const minX = Math.min(...xs) - PAD
-  const minY = Math.min(...ys) - PAD
+  const minY = Math.min(...ys) - PAD - lineH
   const maxX = Math.max(...xs) + NODE_SIZE + PAD
   const maxY = Math.max(...ys) + NODE_SIZE + labelRoom + PAD
 

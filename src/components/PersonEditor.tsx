@@ -306,6 +306,15 @@ export default function PersonEditor({
           </select>
         </label>
 
+        <label style={s.label}>{form.deceased ? 'Lived in' : 'Lives in'}
+          <input
+            style={s.input}
+            placeholder="e.g. Perth, WA"
+            value={form.residence ?? ''}
+            onChange={e => set('residence', e.target.value || undefined)}
+          />
+        </label>
+
         <label style={s.label}>Occupation
           <input style={s.input} value={form.occupation ?? ''} onChange={e => set('occupation', e.target.value || undefined)} />
         </label>
@@ -409,8 +418,8 @@ const s: Record<string, React.CSSProperties> = {
   sectionLabel: { fontSize: 12, fontWeight: 600, fontFamily: 'sans-serif', color: M.textMuted, textTransform: 'uppercase' as const, letterSpacing: '0.05em' },
   relRow: { display: 'flex', gap: 8 },
   row: { display: 'flex', gap: 12 },
-  label: { display: 'flex', flexDirection: 'column', gap: 4, fontSize: 13, fontWeight: 500, fontFamily: 'sans-serif', color: M.textSubtle },
-  input: { padding: '6px 10px', borderRadius: 6, border: `1px solid ${M.border}`, fontSize: 14, fontFamily: 'sans-serif', outline: 'none', background: M.inputBg, color: M.text },
+  label: { display: 'flex', flexDirection: 'column', gap: 4, fontSize: 13, fontWeight: 500, fontFamily: 'sans-serif', color: M.textSubtle, minWidth: 0 },
+  input: { padding: '6px 10px', borderRadius: 6, border: `1px solid ${M.border}`, fontSize: 14, fontFamily: 'sans-serif', outline: 'none', background: M.inputBg, color: M.text, width: '100%', boxSizing: 'border-box' },
   actions: { display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 4 },
   saveBtn: { padding: '8px 20px', background: M.accent, color: M.text, border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 14, fontFamily: 'sans-serif' },
   deleteBtn: { padding: '8px 20px', background: 'transparent', color: M.danger, border: `1px solid ${M.danger}`, borderRadius: 6, cursor: 'pointer', fontSize: 14, fontFamily: 'sans-serif' },

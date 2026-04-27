@@ -172,6 +172,17 @@ function PersonNode({ data, selected }: NodeProps) {
           ↔ SLIDE
         </div>
       )}
+      {person.residence && (
+        <div style={{
+          position: 'absolute', bottom: '100%', left: '50%', transform: 'translateX(-50%)',
+          marginBottom: 4, width: LABEL_WIDTH, textAlign: 'center',
+          fontSize: design.fontSize, fontFamily: 'sans-serif',
+          color: design.locationTextColor, lineHeight: 1.25, fontStyle: 'italic',
+          pointerEvents: 'none',
+        }}>
+          {person.deceased ? 'Lived in' : 'Lives in'} {person.residence}
+        </div>
+      )}
       <PersonShape person={person} settings={settings} hovered={hovered} />
       {showLabelBelow && (
         <div style={{
@@ -205,6 +216,16 @@ function PersonNode({ data, selected }: NodeProps) {
           width: LABEL_WIDTH, marginLeft: (NODE_SIZE - LABEL_WIDTH) / 2, lineHeight: 1.25,
         }}>
           {person.causeOfDeath}
+        </div>
+      )}
+      {person.notes && (
+        <div style={{
+          textAlign: 'center', fontSize: design.fontSize, fontFamily: 'sans-serif',
+          color: design.occupationTextColor,
+          marginTop: 2, width: LABEL_WIDTH, marginLeft: (NODE_SIZE - LABEL_WIDTH) / 2, lineHeight: 1.25,
+          whiteSpace: 'pre-wrap',
+        }}>
+          {person.notes}
         </div>
       )}
       <Handle type="source" position={Position.Bottom} style={{ opacity: 0 }} />

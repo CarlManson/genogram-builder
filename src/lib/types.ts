@@ -99,6 +99,7 @@ export interface Person {
   occupation?: string
   causeOfDeath?: string
   notes?: string
+  residence?: string         // place name; rendered above the shape, prefixed "Lives in" / "Lived in"
   dateDisplay?: DateDisplay  // overrides global default when set
   outlineColor?: string      // hex colour for the shape's outline; falls back to default ink
 }
