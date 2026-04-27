@@ -229,9 +229,6 @@ function renderFamilies(
       if (childData.length > 0) {
         const minChildY = Math.min(...childData.map(d => d.pos!.y))
         const sibshipY = Math.max(coupleY + (isSingleParent ? 10 : 20), minChildY - SIBSHIP_GAP)
-        const childCXs = childData.map(d => d.pos!.x + HALF)
-        const sibLeft = Math.min(midX, ...childCXs)
-        const sibRight = Math.max(midX, ...childCXs)
 
         const dateGroups = new Map<string, string[]>()
         const nonDateChildren: string[] = []
@@ -260,6 +257,29 @@ function renderFamilies(
             lines.push(`<line x1="${midX}" y1="${sibshipY}" x2="${cx}" y2="${cp.y}" stroke="${pc}" stroke-width="${pw}"/>`)
           }
         } else {
+          // Sibship endpoints come from connection points (one per non-twin
+          // child, one per twin group's wishbone stem) — not from each twin's
+          // individual column, so the sibship doesn't extend past the wishbone.
+          const sibConnectionXs: number[] = []
+          for (const childId of nonDateChildren) {
+            const cp = positions[childId]
+            if (cp) sibConnectionXs.push(cp.x + HALF)
+          }
+          const twinGroups: Array<{ ids: string[]; avgCX: number }> = []
+          for (const ids of dateGroups.values()) {
+            if (ids.length === 1) {
+              const cp = positions[ids[0]]
+              if (cp) sibConnectionXs.push(cp.x + HALF)
+            } else {
+              const cPositions = ids.map(id => positions[id]).filter(Boolean) as { x: number; y: number }[]
+              const avgCX = cPositions.reduce((sum, p) => sum + p.x + HALF, 0) / cPositions.length
+              twinGroups.push({ ids, avgCX })
+              sibConnectionXs.push(avgCX)
+            }
+          }
+          const sibLeft = Math.min(midX, ...sibConnectionXs)
+          const sibRight = Math.max(midX, ...sibConnectionXs)
+
           lines.push(`<line x1="${midX}" y1="${coupleY}" x2="${midX}" y2="${sibshipY}" stroke="${pc}" stroke-width="${pw}"/>`)
           lines.push(`<line x1="${sibLeft}" y1="${sibshipY}" x2="${sibRight}" y2="${sibshipY}" stroke="${pc}" stroke-width="${pw}"/>`)
 
@@ -276,19 +296,17 @@ function renderFamilies(
               if (!cp) continue
               const cx = cp.x + HALF
               lines.push(`<line x1="${cx}" y1="${sibshipY}" x2="${cx}" y2="${cp.y}" stroke="${pc}" stroke-width="${pw}"/>`)
-            } else {
-              // Twins among siblings: short stem from the sibship to a wishbone
-              // apex, then V to each twin.
-              const cPositions = ids.map(id => positions[id]).filter(Boolean) as { x: number; y: number }[]
-              const avgCX = cPositions.reduce((sum, p) => sum + p.x + HALF, 0) / cPositions.length
-              const apexY = sibshipY + TWIN_APEX_DROP
-              lines.push(`<line x1="${avgCX}" y1="${sibshipY}" x2="${avgCX}" y2="${apexY}" stroke="${pc}" stroke-width="${pw}"/>`)
-              for (const id of ids) {
-                const cp = positions[id]
-                if (!cp) continue
-                const cx = cp.x + HALF
-                lines.push(`<line x1="${avgCX}" y1="${apexY}" x2="${cx}" y2="${cp.y}" stroke="${pc}" stroke-width="${pw}"/>`)
-              }
+            }
+          }
+
+          for (const { ids, avgCX } of twinGroups) {
+            const apexY = sibshipY + TWIN_APEX_DROP
+            lines.push(`<line x1="${avgCX}" y1="${sibshipY}" x2="${avgCX}" y2="${apexY}" stroke="${pc}" stroke-width="${pw}"/>`)
+            for (const id of ids) {
+              const cp = positions[id]
+              if (!cp) continue
+              const cx = cp.x + HALF
+              lines.push(`<line x1="${avgCX}" y1="${apexY}" x2="${cx}" y2="${cp.y}" stroke="${pc}" stroke-width="${pw}"/>`)
             }
           }
         }
