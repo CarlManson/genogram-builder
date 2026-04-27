@@ -6,6 +6,8 @@ import {
   Controls,
   MiniMap,
   useNodesState,
+  useReactFlow,
+  useNodesInitialized,
   Node,
   NodeMouseHandler,
   OnNodesChange,
@@ -23,6 +25,7 @@ import SelectionToolbar from './components/SelectionToolbar'
 import WelcomeModal from './components/WelcomeModal'
 import CoffeeModal from './components/CoffeeModal'
 import { Coffee } from 'lucide-react'
+import { useIsMobile } from './lib/useIsMobile'
 import { Person, Relationship, GenogramData, Settings, DEFAULT_SETTINGS, DEFAULT_DESIGN, RelContext, Project } from './lib/types'
 import type { ParentIds } from './components/PersonEditor'
 import { SettingsContext } from './lib/SettingsContext'
@@ -84,6 +87,11 @@ export default function App() {
   const [showProjects, setShowProjects] = useState(false)
   const [showCoffee, setShowCoffee] = useState(false)
   const [coffeeIsPrompt, setCoffeeIsPrompt] = useState(false)
+  const isMobile = useIsMobile()
+
+  // Counter incremented whenever the canvas should re-fit (initial load,
+  // project switch, JSON/GEDCOM import). FitViewOnLoad below watches it.
+  const [fitViewKey, setFitViewKey] = useState(0)
 
   // Auto-open the coffee modal once after the user has spent COFFEE_PROMPT_DELAY_MS
   // on the page. The localStorage flag prevents the prompt from re-firing on later
@@ -223,6 +231,7 @@ export default function App() {
     setNodes(genogramToNodes(project.data))
     setUndoStack([])
     setRedoStack([])
+    setFitViewKey(k => k + 1)
   }
 
   // --- Persistence ---
@@ -793,32 +802,40 @@ export default function App() {
             disabled={people.length === 0}
           />
           <input ref={jsonInputRef} type="file" accept=".json" style={{ display: 'none' }} onChange={handleImportJson} />
-          <button
-            style={{ ...cleanUpBtn, opacity: people.length === 0 ? 0.4 : 1 }}
-            disabled={people.length === 0}
-            onClick={handleCleanUpLayout}
-            title="Re-arrange nodes so spouses are adjacent and children are centred under their parents"
-          >
-            ✦ Clean Up Layout
-          </button>
-          <div style={toolbarDivider} />
-          <button
-            style={{ ...undoRedoBtn, opacity: undoStack.length === 0 ? 0.35 : 1 }}
-            disabled={undoStack.length === 0}
-            onClick={handleUndo}
-            title="Undo (⌘Z)"
-          >↩</button>
-          <button
-            style={{ ...undoRedoBtn, opacity: redoStack.length === 0 ? 0.35 : 1 }}
-            disabled={redoStack.length === 0}
-            onClick={handleRedo}
-            title="Redo (⌘⇧Z)"
-          >↪</button>
-          <div style={toolbarDivider} />
+          {!isMobile && (
+            <>
+              <button
+                style={{ ...cleanUpBtn, opacity: people.length === 0 ? 0.4 : 1 }}
+                disabled={people.length === 0}
+                onClick={handleCleanUpLayout}
+                title="Re-arrange nodes so spouses are adjacent and children are centred under their parents"
+              >
+                ✦ Clean Up Layout
+              </button>
+              <div style={toolbarDivider} />
+              <button
+                style={{ ...undoRedoBtn, opacity: undoStack.length === 0 ? 0.35 : 1 }}
+                disabled={undoStack.length === 0}
+                onClick={handleUndo}
+                title="Undo (⌘Z)"
+              >↩</button>
+              <button
+                style={{ ...undoRedoBtn, opacity: redoStack.length === 0 ? 0.35 : 1 }}
+                disabled={redoStack.length === 0}
+                onClick={handleRedo}
+                title="Redo (⌘⇧Z)"
+              >↪</button>
+              <div style={toolbarDivider} />
+            </>
+          )}
           <button style={addBtn} onClick={() => setEditPerson('new')}>+ Person</button>
-          <button style={addBtn} onClick={() => setEditRel('new')}>+ Relationship</button>
+          {!isMobile && <button style={addBtn} onClick={() => setEditRel('new')}>+ Relationship</button>}
           <div style={toolbarDivider} />
-          <button style={gearBtn} onClick={() => setShowSettings(true)} title="Settings">⚙</button>
+          <button
+            style={{ ...gearBtn, border: `1px solid ${C.borderStrong}` }}
+            onClick={() => setShowSettings(true)}
+            title="Settings"
+          >⚙</button>
           <button
             style={{ ...gearBtn, background: '#fcbf47', color: '#fff' }}
             onClick={() => { setCoffeeIsPrompt(false); setShowCoffee(true) }}
@@ -830,22 +847,24 @@ export default function App() {
         </div>
       </div>
 
-      {/* Legend */}
-      <div style={legend}>
-        <LegendItem label="Male" shape="square" />
-        <LegendItem label="Female" shape="circle" />
-        <LegendItem label="Unknown" shape="triangle" />
-        <LegendItem label="Other" shape="diamond" />
-        <LegendItem label="Deceased" shape="filled" />
-        <span style={divider} />
-        <LegendItem label="Married" line="solid" />
-        <LegendItem label="Divorced" line="divorced" />
-        <LegendItem label="Separated" line="separated" />
-        <LegendItem label="Cohabiting" line="dashed" />
-        <LegendItem label="Twins" line="twins" />
-        <span style={divider} />
-        <span style={hint}>Double-click to edit · Drag moves family · Shift+drag slides spouse horizontally</span>
-      </div>
+      {/* Legend — hidden on mobile to free up vertical space for the canvas */}
+      {!isMobile && (
+        <div style={legend}>
+          <LegendItem label="Male" shape="square" />
+          <LegendItem label="Female" shape="circle" />
+          <LegendItem label="Unknown" shape="triangle" />
+          <LegendItem label="Other" shape="diamond" />
+          <LegendItem label="Deceased" shape="filled" />
+          <span style={divider} />
+          <LegendItem label="Married" line="solid" />
+          <LegendItem label="Divorced" line="divorced" />
+          <LegendItem label="Separated" line="separated" />
+          <LegendItem label="Cohabiting" line="dashed" />
+          <LegendItem label="Twins" line="twins" />
+          <span style={divider} />
+          <span style={hint}>Double-click to edit · Drag moves family · Shift+drag slides spouse horizontally</span>
+        </div>
+      )}
 
       {/* Canvas — explicitly light so the build area stays bright while the chrome above/below is dark */}
       <div style={{ flex: 1, background: '#fafaf9' }}>
@@ -891,6 +910,7 @@ export default function App() {
                 onAlignHorizontal={alignSelectedHorizontal}
                 onAlignVertical={alignSelectedVertical}
               />
+              <FitViewOnLoad k={fitViewKey} />
             </ReactFlowProvider>
           </div>
         )}
@@ -956,6 +976,21 @@ export default function App() {
     </div>
     </SettingsContext.Provider>
   )
+}
+
+// Calls fitView whenever `k` changes AND nodes have been measured. We bump `k`
+// on initial load and project switch. fitView() on its own (the boolean prop
+// on <ReactFlow>) only fires once on mount with the empty initial node set, so
+// users were left with an unfit view until they pressed the controls button.
+function FitViewOnLoad({ k }: { k: number }) {
+  const { fitView } = useReactFlow()
+  const nodesInitialized = useNodesInitialized()
+  useEffect(() => {
+    if (!nodesInitialized) return
+    const t = setTimeout(() => fitView({ padding: 0.2, duration: 250 }), 50)
+    return () => clearTimeout(t)
+  }, [k, nodesInitialized, fitView])
+  return null
 }
 
 interface FileMenuProps {
@@ -1079,8 +1114,9 @@ const C = {
 }
 
 const toolbar: React.CSSProperties = {
-  display: 'flex', alignItems: 'center', padding: '0 16px', height: 50,
+  display: 'flex', alignItems: 'center', padding: '8px 12px', minHeight: 50,
   background: C.bg, borderBottom: `1px solid ${C.border}`, flexShrink: 0,
+  flexWrap: 'wrap', gap: 6,
 }
 const logo: React.CSSProperties = {
   fontFamily: 'sans-serif', fontWeight: 700, fontSize: 15, color: C.text, letterSpacing: '-0.01em',

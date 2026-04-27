@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Settings, DesignSettings, NameFormat, DateDisplay, Person, DEFAULT_DESIGN } from '../lib/types'
+import { M } from '../lib/modalTheme'
 
 interface Props {
   settings: Settings
@@ -174,8 +175,8 @@ function TabButton({ active, onClick, children }: { active: boolean; onClick: ()
       onClick={onClick}
       style={{
         ...s.tab,
-        color: active ? '#1a1a1a' : '#6b7280',
-        borderBottomColor: active ? '#1a1a1a' : 'transparent',
+        color: active ? M.text : M.textMuted,
+        borderBottomColor: active ? M.accent : 'transparent',
         fontWeight: active ? 600 : 500,
       }}
     >
@@ -217,23 +218,23 @@ function SliderRow({
 }
 
 const s: Record<string, React.CSSProperties> = {
-  overlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 },
-  panel: { background: '#fff', borderRadius: 10, padding: 24, width: 420, maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 8px 32px rgba(0,0,0,0.18)', display: 'flex', flexDirection: 'column', gap: 12 },
+  overlay: { position: 'fixed', inset: 0, background: M.overlayBg, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 },
+  panel: { background: M.panelBg, borderRadius: 10, padding: 24, width: 420, maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 8px 32px rgba(0,0,0,0.4)', display: 'flex', flexDirection: 'column', gap: 12 },
   header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
-  title: { margin: 0, fontSize: 18, fontWeight: 600, fontFamily: 'sans-serif' },
-  closeBtn: { background: 'none', border: 'none', fontSize: 18, cursor: 'pointer', color: '#666' },
-  tabs: { display: 'flex', gap: 4, borderBottom: '1px solid #e5e7eb', marginBottom: 4 },
+  title: { margin: 0, fontSize: 18, fontWeight: 600, fontFamily: 'sans-serif', color: M.text },
+  closeBtn: { background: 'none', border: 'none', fontSize: 18, cursor: 'pointer', color: M.textSubtle },
+  tabs: { display: 'flex', gap: 4, borderBottom: `1px solid ${M.border}`, marginBottom: 4 },
   tab: { padding: '8px 14px', fontSize: 13, fontFamily: 'sans-serif', cursor: 'pointer', background: 'transparent', border: 'none', borderBottom: '2px solid', marginBottom: -1 },
-  sectionLabel: { margin: 0, fontSize: 13, fontWeight: 600, fontFamily: 'sans-serif', color: '#1a1a1a' },
-  hint: { margin: 0, fontSize: 12, fontFamily: 'sans-serif', color: '#9ca3af' },
-  label: { display: 'flex', flexDirection: 'column', gap: 4, fontSize: 13, fontWeight: 500, fontFamily: 'sans-serif', color: '#333' },
-  input: { padding: '6px 10px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 14, fontFamily: 'sans-serif', outline: 'none' },
-  hr: { border: 'none', borderTop: '1px solid #e5e7eb', margin: '4px 0' },
+  sectionLabel: { margin: 0, fontSize: 13, fontWeight: 600, fontFamily: 'sans-serif', color: M.text },
+  hint: { margin: 0, fontSize: 12, fontFamily: 'sans-serif', color: M.textMuted },
+  label: { display: 'flex', flexDirection: 'column', gap: 4, fontSize: 13, fontWeight: 500, fontFamily: 'sans-serif', color: M.textSubtle },
+  input: { padding: '6px 10px', borderRadius: 6, border: `1px solid ${M.border}`, fontSize: 14, fontFamily: 'sans-serif', outline: 'none', background: M.inputBg, color: M.text },
+  hr: { border: 'none', borderTop: `1px solid ${M.border}`, margin: '4px 0' },
   actions: { display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 4 },
-  saveBtn: { padding: '8px 20px', background: '#1a1a1a', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 14, fontFamily: 'sans-serif' },
-  resetBtn: { padding: '7px 14px', background: '#fff', color: '#374151', border: '1px solid #d1d5db', borderRadius: 6, cursor: 'pointer', fontSize: 13, fontFamily: 'sans-serif', alignSelf: 'flex-start' },
-  row: { display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, fontFamily: 'sans-serif', color: '#333', fontWeight: 500 },
+  saveBtn: { padding: '8px 20px', background: M.accent, color: M.text, border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 14, fontFamily: 'sans-serif' },
+  resetBtn: { padding: '7px 14px', background: 'transparent', color: M.textSubtle, border: `1px solid ${M.border}`, borderRadius: 6, cursor: 'pointer', fontSize: 13, fontFamily: 'sans-serif', alignSelf: 'flex-start' },
+  row: { display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, fontFamily: 'sans-serif', color: M.textSubtle, fontWeight: 500 },
   rowLabel: { flex: 1 },
-  colorInput: { width: 36, height: 26, padding: 0, border: '1px solid #d1d5db', borderRadius: 4, background: 'none', cursor: 'pointer' },
-  hex: { fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', fontSize: 11, color: '#6b7280', minWidth: 64, textAlign: 'right' },
+  colorInput: { width: 36, height: 26, padding: 0, border: `1px solid ${M.border}`, borderRadius: 4, background: 'none', cursor: 'pointer' },
+  hex: { fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', fontSize: 11, color: M.textMuted, minWidth: 64, textAlign: 'right' },
 }

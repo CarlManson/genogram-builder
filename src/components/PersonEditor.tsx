@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { Person, Sex, DateDisplay, Settings, DEFAULT_SETTINGS, RelContext, RelContextType, OUTLINE_COLORS } from '../lib/types'
+import { M } from '../lib/modalTheme'
 
 const DATE_DISPLAY_LABELS: Record<DateDisplay, string> = {
   year: 'Year',
@@ -384,38 +385,38 @@ function ParentOptions({ people, excludeId, primarySex }: {
 }
 
 const s: Record<string, React.CSSProperties> = {
-  overlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 },
-  panel: { background: '#fff', borderRadius: 10, padding: 24, width: 420, maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 8px 32px rgba(0,0,0,0.18)', display: 'flex', flexDirection: 'column', gap: 12 },
+  overlay: { position: 'fixed', inset: 0, background: M.overlayBg, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 },
+  panel: { background: M.panelBg, borderRadius: 10, padding: 24, width: 420, maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 8px 32px rgba(0,0,0,0.4)', display: 'flex', flexDirection: 'column', gap: 12 },
   headerBar: {
     display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-    background: '#f9fafb', borderBottom: '1px solid #e5e7eb',
+    background: M.headerBarBg, borderBottom: `1px solid ${M.border}`,
     padding: '12px 16px', margin: '-24px -24px 0',
     borderRadius: '10px 10px 0 0',
   },
   headerActions: { display: 'flex', alignItems: 'center', gap: 10 },
-  title: { margin: 0, fontSize: 16, fontWeight: 600, fontFamily: 'sans-serif', color: '#1a1a1a' },
-  closeBtn: { background: 'none', border: 'none', fontSize: 18, cursor: 'pointer', color: '#666', padding: 0, lineHeight: 1 },
+  title: { margin: 0, fontSize: 16, fontWeight: 600, fontFamily: 'sans-serif', color: M.text },
+  closeBtn: { background: 'none', border: 'none', fontSize: 18, cursor: 'pointer', color: M.textSubtle, padding: 0, lineHeight: 1 },
   colorWrap: { position: 'relative', display: 'inline-flex' },
   swatch: { width: 22, height: 22, borderRadius: 6, border: '1px solid', cursor: 'pointer', padding: 0 },
   colorMenu: {
     position: 'absolute', top: 'calc(100% + 6px)', right: 0,
-    background: '#fff', border: '1px solid #e5e7eb', borderRadius: 8,
-    boxShadow: '0 6px 20px rgba(0,0,0,0.12)', zIndex: 200, padding: 8,
+    background: M.inputBg, border: `1px solid ${M.border}`, borderRadius: 8,
+    boxShadow: '0 6px 20px rgba(0,0,0,0.4)', zIndex: 200, padding: 8,
   },
   colorGrid: { display: 'grid', gridTemplateColumns: 'repeat(4, 22px)', gap: 6 },
   colorCell: { width: 22, height: 22, borderRadius: 6, border: 'none', cursor: 'pointer', padding: 0 },
-  relSection: { display: 'flex', flexDirection: 'column', gap: 6, background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 8, padding: '10px 12px' },
-  sectionLabel: { fontSize: 12, fontWeight: 600, fontFamily: 'sans-serif', color: '#6b7280', textTransform: 'uppercase' as const, letterSpacing: '0.05em' },
+  relSection: { display: 'flex', flexDirection: 'column', gap: 6, background: M.inputBg, border: `1px solid ${M.border}`, borderRadius: 8, padding: '10px 12px' },
+  sectionLabel: { fontSize: 12, fontWeight: 600, fontFamily: 'sans-serif', color: M.textMuted, textTransform: 'uppercase' as const, letterSpacing: '0.05em' },
   relRow: { display: 'flex', gap: 8 },
   row: { display: 'flex', gap: 12 },
-  label: { display: 'flex', flexDirection: 'column', gap: 4, fontSize: 13, fontWeight: 500, fontFamily: 'sans-serif', color: '#333' },
-  input: { padding: '6px 10px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 14, fontFamily: 'sans-serif', outline: 'none' },
+  label: { display: 'flex', flexDirection: 'column', gap: 4, fontSize: 13, fontWeight: 500, fontFamily: 'sans-serif', color: M.textSubtle },
+  input: { padding: '6px 10px', borderRadius: 6, border: `1px solid ${M.border}`, fontSize: 14, fontFamily: 'sans-serif', outline: 'none', background: M.inputBg, color: M.text },
   actions: { display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 4 },
-  saveBtn: { padding: '8px 20px', background: '#1a1a1a', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 14, fontFamily: 'sans-serif' },
-  deleteBtn: { padding: '8px 20px', background: '#fff', color: '#dc2626', border: '1px solid #dc2626', borderRadius: 6, cursor: 'pointer', fontSize: 14, fontFamily: 'sans-serif' },
+  saveBtn: { padding: '8px 20px', background: M.accent, color: M.text, border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 14, fontFamily: 'sans-serif' },
+  deleteBtn: { padding: '8px 20px', background: 'transparent', color: M.danger, border: `1px solid ${M.danger}`, borderRadius: 6, cursor: 'pointer', fontSize: 14, fontFamily: 'sans-serif' },
   saveSplit: { position: 'relative', display: 'inline-flex' },
-  saveMain: { padding: '8px 20px', background: '#1a1a1a', color: '#fff', border: 'none', borderRadius: '6px 0 0 6px', cursor: 'pointer', fontSize: 14, fontFamily: 'sans-serif' },
-  saveCaret: { padding: '8px 10px', background: '#1a1a1a', color: '#fff', border: 'none', borderLeft: '1px solid rgba(255,255,255,0.18)', borderRadius: '0 6px 6px 0', cursor: 'pointer', fontSize: 12, fontFamily: 'sans-serif', lineHeight: 1 },
-  saveMenu: { position: 'absolute', bottom: 'calc(100% + 5px)', right: 0, minWidth: 200, background: '#fff', border: '1px solid #e5e7eb', borderRadius: 8, boxShadow: '0 6px 20px rgba(0,0,0,0.1)', zIndex: 200, padding: '4px 0' },
-  saveMenuItem: { display: 'block', width: '100%', textAlign: 'left', padding: '7px 14px', border: 'none', cursor: 'pointer', background: 'transparent', color: '#1a1a1a', fontSize: 13, fontFamily: 'sans-serif' },
+  saveMain: { padding: '8px 20px', background: M.accent, color: M.text, border: 'none', borderRadius: '6px 0 0 6px', cursor: 'pointer', fontSize: 14, fontFamily: 'sans-serif' },
+  saveCaret: { padding: '8px 10px', background: M.accent, color: M.text, border: 'none', borderLeft: '1px solid rgba(255,255,255,0.25)', borderRadius: '0 6px 6px 0', cursor: 'pointer', fontSize: 12, fontFamily: 'sans-serif', lineHeight: 1 },
+  saveMenu: { position: 'absolute', bottom: 'calc(100% + 5px)', right: 0, minWidth: 200, background: M.inputBg, border: `1px solid ${M.border}`, borderRadius: 8, boxShadow: '0 6px 20px rgba(0,0,0,0.4)', zIndex: 200, padding: '4px 0' },
+  saveMenuItem: { display: 'block', width: '100%', textAlign: 'left', padding: '7px 14px', border: 'none', cursor: 'pointer', background: 'transparent', color: M.text, fontSize: 13, fontFamily: 'sans-serif' },
 }

@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react'
 import { parseGedcom, buildGenogramFromGedcom, GedcomPerson } from '../lib/gedcom'
 import { GenogramData } from '../lib/types'
+import { M } from '../lib/modalTheme'
 
 interface Props {
   onImport: (data: GenogramData) => void
@@ -102,7 +103,7 @@ export default function GedcomImport({ onImport, onClose }: Props) {
                     key={p.id}
                     style={{
                       ...s.personRow,
-                      background: startId === p.id ? '#eff6ff' : undefined,
+                      background: startId === p.id ? 'rgba(109, 124, 229, 0.18)' : undefined,
                       fontWeight: startId === p.id ? 600 : undefined,
                     }}
                     onClick={() => setStartId(p.id)}
@@ -158,52 +159,53 @@ export default function GedcomImport({ onImport, onClose }: Props) {
 
 const s: Record<string, React.CSSProperties> = {
   overlay: {
-    position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.35)',
+    position: 'fixed', inset: 0, background: M.overlayBg,
     display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100,
   },
   panel: {
-    background: '#fff', borderRadius: 10, padding: 24, width: 440, maxHeight: '90vh',
-    overflowY: 'auto', boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
+    background: M.panelBg, borderRadius: 10, padding: 24, width: 440, maxHeight: '90vh',
+    overflowY: 'auto', boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
     display: 'flex', flexDirection: 'column', gap: 14,
   },
   header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
-  title: { margin: 0, fontSize: 18, fontWeight: 600, fontFamily: 'sans-serif' },
-  closeBtn: { background: 'none', border: 'none', fontSize: 18, cursor: 'pointer', color: '#666' },
+  title: { margin: 0, fontSize: 18, fontWeight: 600, fontFamily: 'sans-serif', color: M.text },
+  closeBtn: { background: 'none', border: 'none', fontSize: 18, cursor: 'pointer', color: M.textSubtle },
   dropzone: {
-    border: '2px dashed #d1d5db', borderRadius: 8, padding: '20px 16px',
-    textAlign: 'center', cursor: 'pointer', fontSize: 14, fontFamily: 'sans-serif', color: '#555',
+    border: `2px dashed ${M.border}`, borderRadius: 8, padding: '20px 16px',
+    textAlign: 'center', cursor: 'pointer', fontSize: 14, fontFamily: 'sans-serif', color: M.textSubtle,
   },
   label: {
     display: 'flex', flexDirection: 'column', gap: 4,
-    fontSize: 13, fontWeight: 500, fontFamily: 'sans-serif', color: '#333',
+    fontSize: 13, fontWeight: 500, fontFamily: 'sans-serif', color: M.textSubtle,
   },
   input: {
-    padding: '6px 10px', borderRadius: 6, border: '1px solid #d1d5db',
+    padding: '6px 10px', borderRadius: 6, border: `1px solid ${M.border}`,
     fontSize: 14, fontFamily: 'sans-serif', outline: 'none',
+    background: M.inputBg, color: M.text,
   },
   personList: {
-    border: '1px solid #e5e7eb', borderRadius: 6, maxHeight: 200, overflowY: 'auto',
+    border: `1px solid ${M.border}`, borderRadius: 6, maxHeight: 200, overflowY: 'auto',
   },
   personRow: {
     display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px', cursor: 'pointer',
-    fontSize: 13, fontFamily: 'sans-serif', borderBottom: '1px solid #f3f4f6',
+    fontSize: 13, fontFamily: 'sans-serif', borderBottom: `1px solid ${M.borderSubtle}`, color: M.text,
   },
   row: { display: 'flex', gap: 16 },
   stepperRow: { display: 'flex', alignItems: 'center', gap: 10, marginTop: 4 },
   stepBtn: {
-    width: 28, height: 28, border: '1px solid #d1d5db', borderRadius: 6,
-    background: '#f9fafb', cursor: 'pointer', fontSize: 16, display: 'flex',
+    width: 28, height: 28, border: `1px solid ${M.border}`, borderRadius: 6,
+    background: M.inputBg, color: M.text, cursor: 'pointer', fontSize: 16, display: 'flex',
     alignItems: 'center', justifyContent: 'center',
   },
-  stepVal: { fontSize: 16, fontWeight: 600, fontFamily: 'sans-serif', minWidth: 24, textAlign: 'center' },
+  stepVal: { fontSize: 16, fontWeight: 600, fontFamily: 'sans-serif', minWidth: 24, textAlign: 'center', color: M.text },
   actions: { display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 4 },
   importBtn: {
-    padding: '8px 20px', background: '#1a1a1a', color: '#fff',
+    padding: '8px 20px', background: M.accent, color: M.text,
     border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 14, fontFamily: 'sans-serif',
   },
   cancelBtn: {
-    padding: '8px 20px', background: '#fff', color: '#333',
-    border: '1px solid #d1d5db', borderRadius: 6, cursor: 'pointer', fontSize: 14, fontFamily: 'sans-serif',
+    padding: '8px 20px', background: 'transparent', color: M.textSubtle,
+    border: `1px solid ${M.border}`, borderRadius: 6, cursor: 'pointer', fontSize: 14, fontFamily: 'sans-serif',
   },
 }
 

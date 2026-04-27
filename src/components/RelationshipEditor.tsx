@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Person, Relationship, RelationshipType } from '../lib/types'
+import { M } from '../lib/modalTheme'
 
 interface Props {
   people: Person[]
@@ -95,31 +96,32 @@ export default function RelationshipEditor({ people, relationship, onSave, onDel
 
 const styles: Record<string, React.CSSProperties> = {
   overlay: {
-    position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.3)',
+    position: 'fixed', inset: 0, background: M.overlayBg,
     display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100,
   },
   panel: {
-    background: '#fff', borderRadius: 10, padding: 24, width: 360,
-    boxShadow: '0 8px 32px rgba(0,0,0,0.18)', display: 'flex', flexDirection: 'column', gap: 12,
+    background: M.panelBg, borderRadius: 10, padding: 24, width: 360,
+    boxShadow: '0 8px 32px rgba(0,0,0,0.4)', display: 'flex', flexDirection: 'column', gap: 12,
   },
   header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
-  title: { margin: 0, fontSize: 18, fontWeight: 600, fontFamily: 'sans-serif' },
-  closeBtn: { background: 'none', border: 'none', fontSize: 18, cursor: 'pointer', color: '#666' },
+  title: { margin: 0, fontSize: 18, fontWeight: 600, fontFamily: 'sans-serif', color: M.text },
+  closeBtn: { background: 'none', border: 'none', fontSize: 18, cursor: 'pointer', color: M.textSubtle },
   label: {
     display: 'flex', flexDirection: 'column', gap: 4,
-    fontSize: 13, fontWeight: 500, fontFamily: 'sans-serif', color: '#333',
+    fontSize: 13, fontWeight: 500, fontFamily: 'sans-serif', color: M.textSubtle,
   },
   input: {
-    padding: '6px 10px', borderRadius: 6, border: '1px solid #d1d5db',
+    padding: '6px 10px', borderRadius: 6, border: `1px solid ${M.border}`,
     fontSize: 14, fontFamily: 'sans-serif', outline: 'none',
+    background: M.inputBg, color: M.text,
   },
   actions: { display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 4 },
   saveBtn: {
-    padding: '8px 20px', background: '#1a1a1a', color: '#fff',
+    padding: '8px 20px', background: M.accent, color: M.text,
     border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 14, fontFamily: 'sans-serif',
   },
   deleteBtn: {
-    padding: '8px 20px', background: '#fff', color: '#dc2626',
-    border: '1px solid #dc2626', borderRadius: 6, cursor: 'pointer', fontSize: 14, fontFamily: 'sans-serif',
+    padding: '8px 20px', background: 'transparent', color: M.danger,
+    border: `1px solid ${M.danger}`, borderRadius: 6, cursor: 'pointer', fontSize: 14, fontFamily: 'sans-serif',
   },
 }

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Project } from '../lib/types'
+import { M } from '../lib/modalTheme'
 
 interface Props {
   projects: Project[]
@@ -52,8 +53,8 @@ export default function ProjectManager({
           {projects.sort((a, b) => b.lastModified - a.lastModified).map(p => (
             <div key={p.id} style={{
               ...s.item,
-              background: p.id === activeProjectId ? '#eff6ff' : '#fff',
-              borderColor: p.id === activeProjectId ? '#3b82f6' : '#e5e7eb',
+              background: p.id === activeProjectId ? 'rgba(109, 124, 229, 0.12)' : 'transparent',
+              borderColor: p.id === activeProjectId ? '#6d7ce5' : '#45475a',
             }}>
               <div style={s.itemMain}>
                 {editingId === p.id ? (
@@ -85,20 +86,20 @@ export default function ProjectManager({
 }
 
 const s: Record<string, React.CSSProperties> = {
-  overlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 },
-  panel: { background: '#fff', borderRadius: 10, padding: 24, width: 480, maxHeight: '80vh', display: 'flex', flexDirection: 'column', gap: 16, boxShadow: '0 8px 32px rgba(0,0,0,0.18)' },
+  overlay: { position: 'fixed', inset: 0, background: M.overlayBg, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 },
+  panel: { background: M.panelBg, borderRadius: 10, padding: 24, width: 480, maxHeight: '80vh', display: 'flex', flexDirection: 'column', gap: 16, boxShadow: '0 8px 32px rgba(0,0,0,0.4)' },
   header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
-  title: { margin: 0, fontSize: 18, fontWeight: 600, fontFamily: 'sans-serif' },
-  closeBtn: { background: 'none', border: 'none', fontSize: 18, cursor: 'pointer', color: '#666' },
+  title: { margin: 0, fontSize: 18, fontWeight: 600, fontFamily: 'sans-serif', color: M.text },
+  closeBtn: { background: 'none', border: 'none', fontSize: 18, cursor: 'pointer', color: M.textSubtle },
   newList: { display: 'flex', gap: 8 },
-  input: { padding: '8px 12px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 14, fontFamily: 'sans-serif', outline: 'none', flex: 1 },
-  saveBtn: { padding: '8px 16px', background: '#1a1a1a', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 14, fontFamily: 'sans-serif' },
+  input: { padding: '8px 12px', borderRadius: 6, border: `1px solid ${M.border}`, fontSize: 14, fontFamily: 'sans-serif', outline: 'none', flex: 1, background: M.inputBg, color: M.text },
+  saveBtn: { padding: '8px 16px', background: M.accent, color: M.text, border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 14, fontFamily: 'sans-serif' },
   list: { display: 'flex', flexDirection: 'column', gap: 8, overflowY: 'auto' },
-  item: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', borderRadius: 8, border: '1px solid #e5e7eb', gap: 12 },
+  item: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', borderRadius: 8, border: `1px solid ${M.border}`, gap: 12 },
   itemMain: { flex: 1, display: 'flex', alignItems: 'center', cursor: 'pointer' },
   itemInfo: { display: 'flex', flexDirection: 'column', gap: 2, flex: 1 },
-  itemName: { fontSize: 14, fontWeight: 600, fontFamily: 'sans-serif', color: '#1a1a1a' },
-  itemDate: { fontSize: 11, color: '#9ca3af', fontFamily: 'sans-serif' },
+  itemName: { fontSize: 14, fontWeight: 600, fontFamily: 'sans-serif', color: M.text },
+  itemDate: { fontSize: 11, color: M.textMuted, fontFamily: 'sans-serif' },
   itemActions: { display: 'flex', gap: 4 },
-  actionBtn: { background: 'none', border: 'none', padding: 4, cursor: 'pointer', fontSize: 16, color: '#6b7280' },
+  actionBtn: { background: 'none', border: 'none', padding: 4, cursor: 'pointer', fontSize: 16, color: M.textSubtle },
 }
