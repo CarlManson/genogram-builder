@@ -277,6 +277,16 @@ export default function App() {
     }
   }
 
+  function handleNewBlank() {
+    const base = 'Untitled Genogram'
+    let name = base
+    let n = 2
+    while (projects.some(p => p.name === name)) {
+      name = `${base} ${n++}`
+    }
+    handleCreateProject(name)
+  }
+
   function handleCreateProject(name: string) {
     const newProject: Project = {
       id: crypto.randomUUID(),
@@ -857,6 +867,7 @@ export default function App() {
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <FileMenu
+            onNewBlank={handleNewBlank}
             onImportGedcom={() => setShowGedcom(true)}
             onOpenJson={() => jsonInputRef.current?.click()}
             onExportSvg={handleExportSvg}
@@ -1072,6 +1083,7 @@ function FitViewOnLoad({ k }: { k: number }) {
 }
 
 interface FileMenuProps {
+  onNewBlank: () => void
   onImportGedcom: () => void
   onOpenJson: () => void
   onExportSvg: () => void
@@ -1080,7 +1092,7 @@ interface FileMenuProps {
   disabled: boolean
 }
 
-function FileMenu({ onImportGedcom, onOpenJson, onExportSvg, onSaveJson, onStartOver, disabled }: FileMenuProps) {
+function FileMenu({ onNewBlank, onImportGedcom, onOpenJson, onExportSvg, onSaveJson, onStartOver, disabled }: FileMenuProps) {
   const [open, setOpen] = useState(false)
   const [hoveredItem, setHoveredItem] = useState<string | null>(null)
   const ref = useRef<HTMLDivElement>(null)
@@ -1138,6 +1150,7 @@ function FileMenu({ onImportGedcom, onOpenJson, onExportSvg, onSaveJson, onStart
       </button>
       {open && (
         <div style={fileMenuDropdown}>
+          {menuItem('new-blank', 'New blank genogram', onNewBlank, { sublabel: 'Empty canvas' })}
           {menuItem('gedcom', 'Import GEDCOM…', onImportGedcom, { sublabel: 'Creates a new genogram' })}
           {menuItem('open-json', 'Import from JSON…', onOpenJson, { sublabel: 'Restore a backup' })}
           <div style={fileMenuSep} />

@@ -139,6 +139,7 @@ export default function UserGuideModal({ onClose }: Props) {
 
           <Section title="Files">
             <ul style={s.ul}>
+              <li><strong>New blank genogram</strong> — adds a fresh empty project. Rename it via the project pill next to the logo.</li>
               <li><strong>Import GEDCOM</strong> — creates a new genogram from a <code>.ged</code> file. Choose the focal person and the number of generations above and below.</li>
               <li><strong>Import from JSON</strong> — restores a Genogram Builder backup as a new project.</li>
               <li><strong>Export SVG</strong> — clean vector image suitable for printing or embedding.</li>
