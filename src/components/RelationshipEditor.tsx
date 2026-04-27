@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Person, Relationship, RelationshipType } from '../lib/types'
+import { Person, Relationship, RelationshipType, ParentChildNature } from '../lib/types'
 import { M } from '../lib/modalTheme'
 
 interface Props {
@@ -15,6 +15,7 @@ export default function RelationshipEditor({ people, relationship, onSave, onDel
   const [targetId, setTargetId] = useState(relationship?.targetId ?? '')
   const [type, setType] = useState<RelationshipType>(relationship?.type ?? 'married')
   const [location, setLocation] = useState(relationship?.location ?? '')
+  const [nature, setNature] = useState<ParentChildNature>(relationship?.nature ?? 'biological')
 
   function handleSave() {
     if (!sourceId || !targetId || sourceId === targetId) return
@@ -23,7 +24,8 @@ export default function RelationshipEditor({ people, relationship, onSave, onDel
       type,
       sourceId,
       targetId,
-      location: location.trim() || undefined,
+      location: type !== 'parent-child' ? (location.trim() || undefined) : undefined,
+      nature: type === 'parent-child' && nature !== 'biological' ? nature : undefined,
     })
     onClose()
   }
@@ -68,6 +70,16 @@ export default function RelationshipEditor({ people, relationship, onSave, onDel
             <option value="parent-child">Parent → Child</option>
           </select>
         </label>
+
+        {type === 'parent-child' && (
+          <label style={styles.label}>Nature
+            <select style={styles.input} value={nature} onChange={e => setNature(e.target.value as ParentChildNature)}>
+              <option value="biological">Biological (solid line)</option>
+              <option value="adopted">Adopted (dashed line)</option>
+              <option value="foster">Foster (dotted line)</option>
+            </select>
+          </label>
+        )}
 
         {type !== 'parent-child' && (
           <label style={styles.label}>Location / lives

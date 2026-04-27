@@ -105,12 +105,17 @@ export interface Person {
   outlineColor?: string      // hex colour for the shape's outline; falls back to default ink
 }
 
+export type ParentChildNature = 'biological' | 'adopted' | 'foster'
+
 export interface Relationship {
   id: string
   type: RelationshipType
   sourceId: string
   targetId: string
   location?: string
+  // Only meaningful when type === 'parent-child'. Undefined / 'biological'
+  // renders as a solid line; 'adopted' renders dashed; 'foster' renders dotted.
+  nature?: ParentChildNature
 }
 
 export interface GenogramData {

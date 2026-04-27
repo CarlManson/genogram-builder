@@ -79,6 +79,7 @@ export default function UserGuideModal({ onClose }: Props) {
               <li><strong>Divorced</strong> — solid line with two slashes.</li>
               <li><strong>Never married, separated</strong> — dashed line with one slash.</li>
               <li><strong>Parent–child</strong> — vertical drop from couple line to a horizontal sibship line, then verticals to each child. Twins (same exact birth date) converge to a single point on the sibship line.</li>
+              <li><strong>Adopted / fostered</strong> — open the parent-child relationship and set <em>Nature</em> to <strong>Adopted</strong> (renders the child line dashed) or <strong>Foster</strong> (dotted). Biological is the default and stays solid. Useful for a relative who was adopted out and later reunited: keep the bio parent-child line as biological so the family connection is shown, and add a separate dashed line from the adoptive parents if they're in the genogram.</li>
             </ul>
             <p style={s.p}>
               You can add a <strong>location</strong> on a couple relationship (e.g.

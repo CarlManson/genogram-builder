@@ -167,6 +167,22 @@ export default function GenogramConnections({ relationships, onCoupleDoubleClick
       familyKey = `single-${p1Id}`
     }
 
+    // Returns the SVG stroke-dasharray for the child-vertical based on the
+    // natures of every parent-child relationship pointing at this child from
+    // this family's parents. All-adopted → dashed, all-foster → dotted, else
+    // solid. Mixed nature falls back to solid since the convention is per-rel.
+    const childDash = (childId: string): string | undefined => {
+      const parentIds = [p1Id, p2Id].filter(Boolean) as string[]
+      const childRels = relationships.filter(r =>
+        r.type === 'parent-child' && r.targetId === childId && parentIds.includes(r.sourceId)
+      )
+      if (childRels.length === 0) return undefined
+      const natures = childRels.map(r => r.nature ?? 'biological')
+      if (natures.every(n => n === 'adopted')) return '6,4'
+      if (natures.every(n => n === 'foster')) return '2,3'
+      return undefined
+    }
+
     if (family.childIds.length > 0) {
       const childData = family.childIds.map(id => ({ id, pos: posMap.get(id), p: personMap.get(id) })).filter(d => d.pos && d.p)
       if (childData.length > 0) {
@@ -205,7 +221,7 @@ export default function GenogramConnections({ relationships, onCoupleDoubleClick
             const cp = posMap.get(id)
             if (!cp) continue
             const cx = cp.x + NW / 2
-            visibles.push(<line key={`child-${familyKey}-${id}`} x1={midX} y1={sibshipY} x2={cx} y2={cp.y} stroke={pcColor} strokeWidth={pcWidth} style={{ pointerEvents: 'none' }} />)
+            visibles.push(<line key={`child-${familyKey}-${id}`} x1={midX} y1={sibshipY} x2={cx} y2={cp.y} stroke={pcColor} strokeWidth={pcWidth} strokeDasharray={childDash(id)} style={{ pointerEvents: 'none' }} />)
           }
         } else {
           // Build the list of points where the sibship line is "tapped":
@@ -240,7 +256,7 @@ export default function GenogramConnections({ relationships, onCoupleDoubleClick
             const cp = posMap.get(childId)
             if (!cp) continue
             const cx = cp.x + NW / 2
-            visibles.push(<line key={`child-${familyKey}-${childId}`} x1={cx} y1={sibshipY} x2={cx} y2={cp.y} stroke={pcColor} strokeWidth={pcWidth} style={{ pointerEvents: 'none' }} />)
+            visibles.push(<line key={`child-${familyKey}-${childId}`} x1={cx} y1={sibshipY} x2={cx} y2={cp.y} stroke={pcColor} strokeWidth={pcWidth} strokeDasharray={childDash(childId)} style={{ pointerEvents: 'none' }} />)
           }
 
           for (const ids of dateGroups.values()) {
@@ -248,7 +264,7 @@ export default function GenogramConnections({ relationships, onCoupleDoubleClick
               const cp = posMap.get(ids[0])
               if (!cp) continue
               const cx = cp.x + NW / 2
-              visibles.push(<line key={`child-${familyKey}-${ids[0]}`} x1={cx} y1={sibshipY} x2={cx} y2={cp.y} stroke={pcColor} strokeWidth={pcWidth} style={{ pointerEvents: 'none' }} />)
+              visibles.push(<line key={`child-${familyKey}-${ids[0]}`} x1={cx} y1={sibshipY} x2={cx} y2={cp.y} stroke={pcColor} strokeWidth={pcWidth} strokeDasharray={childDash(ids[0])} style={{ pointerEvents: 'none' }} />)
             }
           }
 
@@ -259,7 +275,7 @@ export default function GenogramConnections({ relationships, onCoupleDoubleClick
               const cp = posMap.get(id)
               if (!cp) continue
               const cx = cp.x + NW / 2
-              visibles.push(<line key={`child-${familyKey}-${id}`} x1={avgCX} y1={apexY} x2={cx} y2={cp.y} stroke={pcColor} strokeWidth={pcWidth} style={{ pointerEvents: 'none' }} />)
+              visibles.push(<line key={`child-${familyKey}-${id}`} x1={avgCX} y1={apexY} x2={cx} y2={cp.y} stroke={pcColor} strokeWidth={pcWidth} strokeDasharray={childDash(id)} style={{ pointerEvents: 'none' }} />)
             }
           }
         }

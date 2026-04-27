@@ -224,6 +224,19 @@ function renderFamilies(
       coupleY = p1Pos.y + NODE_SIZE
     }
 
+    // Per-rel adoption nature → dasharray for the child-vertical.
+    const childDash = (childId: string): string => {
+      const parentIds = [p1Id, p2Id].filter(Boolean) as string[]
+      const childRels = data.relationships.filter(r =>
+        r.type === 'parent-child' && r.targetId === childId && parentIds.includes(r.sourceId)
+      )
+      if (childRels.length === 0) return ''
+      const natures = childRels.map(r => r.nature ?? 'biological')
+      if (natures.every(n => n === 'adopted')) return ' stroke-dasharray="6,4"'
+      if (natures.every(n => n === 'foster')) return ' stroke-dasharray="2,3"'
+      return ''
+    }
+
     if (family.childIds.length > 0) {
       const childData = family.childIds.map(id => ({ id, pos: positions[id], p: personMap.get(id) })).filter(d => d.pos && d.p)
       if (childData.length > 0) {
@@ -254,7 +267,7 @@ function renderFamilies(
             const cp = positions[id]
             if (!cp) continue
             const cx = cp.x + HALF
-            lines.push(`<line x1="${midX}" y1="${sibshipY}" x2="${cx}" y2="${cp.y}" stroke="${pc}" stroke-width="${pw}"/>`)
+            lines.push(`<line x1="${midX}" y1="${sibshipY}" x2="${cx}" y2="${cp.y}" stroke="${pc}" stroke-width="${pw}"${childDash(id)}/>`)
           }
         } else {
           // Sibship endpoints come from connection points (one per non-twin
@@ -287,7 +300,7 @@ function renderFamilies(
             const cp = positions[childId]
             if (!cp) continue
             const cx = cp.x + HALF
-            lines.push(`<line x1="${cx}" y1="${sibshipY}" x2="${cx}" y2="${cp.y}" stroke="${pc}" stroke-width="${pw}"/>`)
+            lines.push(`<line x1="${cx}" y1="${sibshipY}" x2="${cx}" y2="${cp.y}" stroke="${pc}" stroke-width="${pw}"${childDash(childId)}/>`)
           }
 
           for (const ids of dateGroups.values()) {
@@ -295,7 +308,7 @@ function renderFamilies(
               const cp = positions[ids[0]]
               if (!cp) continue
               const cx = cp.x + HALF
-              lines.push(`<line x1="${cx}" y1="${sibshipY}" x2="${cx}" y2="${cp.y}" stroke="${pc}" stroke-width="${pw}"/>`)
+              lines.push(`<line x1="${cx}" y1="${sibshipY}" x2="${cx}" y2="${cp.y}" stroke="${pc}" stroke-width="${pw}"${childDash(ids[0])}/>`)
             }
           }
 
@@ -306,7 +319,7 @@ function renderFamilies(
               const cp = positions[id]
               if (!cp) continue
               const cx = cp.x + HALF
-              lines.push(`<line x1="${avgCX}" y1="${apexY}" x2="${cx}" y2="${cp.y}" stroke="${pc}" stroke-width="${pw}"/>`)
+              lines.push(`<line x1="${avgCX}" y1="${apexY}" x2="${cx}" y2="${cp.y}" stroke="${pc}" stroke-width="${pw}"${childDash(id)}/>`)
             }
           }
         }
