@@ -28,8 +28,17 @@ export default function UserGuideModal({ onClose }: Props) {
             <ul style={s.ul}>
               <li>Click <strong>+ Person</strong> to add your first family member, or use <strong>File ▸ Import GEDCOM…</strong> to load an existing family tree.</li>
               <li>The first person becomes a standalone node. Use the <strong>Save &amp; add…</strong> menu (the ▾ next to Save) to chain on a spouse, child, sibling or parent without closing the editor.</li>
-              <li>Everything is saved automatically in your browser. There is no server, no signup; clearing your browser data will erase your work, so use <strong>File ▸ Save JSON</strong> for backups.</li>
             </ul>
+
+            <div style={s.warning}>
+              <div style={s.warningTitle}>⚠ Back up your work — it lives in your browser only.</div>
+              <div style={s.warningBody}>
+                There is no server and no account. Clearing your browser data,
+                using private/incognito mode, or switching browsers will erase
+                everything you've built. Use <strong>File ▸ Backup to JSON</strong>
+                to save a copy you can restore from later.
+              </div>
+            </div>
           </Section>
 
           <Section title="Adding people">
@@ -130,10 +139,10 @@ export default function UserGuideModal({ onClose }: Props) {
 
           <Section title="Files">
             <ul style={s.ul}>
-              <li><strong>Import GEDCOM</strong> — drop a <code>.ged</code> file, choose the focal person, and pick how many generations to include above and below.</li>
-              <li><strong>Open JSON</strong> — load a previously-saved Genogram Builder JSON file as a new project.</li>
-              <li><strong>Save JSON</strong> — back up the current genogram as JSON. Round-trips losslessly.</li>
+              <li><strong>Import GEDCOM</strong> — creates a new genogram from a <code>.ged</code> file. Choose the focal person and the number of generations above and below.</li>
+              <li><strong>Import from JSON</strong> — restores a Genogram Builder backup as a new project.</li>
               <li><strong>Export SVG</strong> — clean vector image suitable for printing or embedding.</li>
+              <li><strong>Backup to JSON</strong> — saves the current genogram to a JSON file. Round-trips losslessly; this is the file you'd <em>Import from JSON</em> later.</li>
               <li><strong>Start Over</strong> — clears the current genogram (within a project). Undoable.</li>
             </ul>
           </Section>
@@ -202,6 +211,15 @@ const s: Record<string, React.CSSProperties> = {
   p: { margin: 0, fontSize: 13, lineHeight: 1.55, fontFamily: 'sans-serif', color: M.textSubtle },
   ul: { margin: 0, paddingLeft: 18, fontSize: 13, lineHeight: 1.6, fontFamily: 'sans-serif', color: M.textSubtle },
   link: { color: M.accent, textDecoration: 'underline' },
+  warning: {
+    marginTop: 8,
+    background: 'rgba(252, 191, 71, 0.10)',
+    border: '1px solid rgba(252, 191, 71, 0.45)',
+    borderRadius: 8, padding: '12px 14px',
+    fontFamily: 'sans-serif', color: '#fcbf47',
+  },
+  warningTitle: { fontSize: 13, fontWeight: 700, lineHeight: 1.3, marginBottom: 4 },
+  warningBody: { fontSize: 13, lineHeight: 1.5 },
   actions: { display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 4 },
   saveBtn: { padding: '8px 20px', background: M.accent, color: M.text, border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 14, fontFamily: 'sans-serif' },
 }

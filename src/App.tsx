@@ -1094,14 +1094,14 @@ function FileMenu({ onImportGedcom, onOpenJson, onExportSvg, onSaveJson, onStart
     return () => document.removeEventListener('mousedown', handle)
   }, [open])
 
-  function menuItem(key: string, label: string, action: () => void, opts: { danger?: boolean; itemDisabled?: boolean } = {}) {
+  function menuItem(key: string, label: string, action: () => void, opts: { danger?: boolean; itemDisabled?: boolean; sublabel?: string } = {}) {
     const isHovered = hoveredItem === key && !opts.itemDisabled
     return (
       <button
         key={key}
         style={{
           display: 'block', width: '100%', textAlign: 'left',
-          padding: '7px 14px', border: 'none',
+          padding: '8px 14px', border: 'none',
           cursor: opts.itemDisabled ? 'default' : 'pointer',
           background: isHovered ? (opts.danger ? '#fff1f1' : '#f3f4f6') : 'transparent',
           color: opts.itemDisabled ? '#c0c4cc' : opts.danger ? '#dc2626' : '#1a1a1a',
@@ -1112,7 +1112,13 @@ function FileMenu({ onImportGedcom, onOpenJson, onExportSvg, onSaveJson, onStart
         onMouseLeave={() => setHoveredItem(null)}
         onClick={() => { if (!opts.itemDisabled) { action(); setOpen(false) } }}
       >
-        {label}
+        <div style={{ fontWeight: 500 }}>{label}</div>
+        {opts.sublabel && (
+          <div style={{
+            fontSize: 11, lineHeight: 1.3, marginTop: 1,
+            color: opts.itemDisabled ? '#c0c4cc' : '#6b7280',
+          }}>{opts.sublabel}</div>
+        )}
       </button>
     )
   }
@@ -1132,13 +1138,13 @@ function FileMenu({ onImportGedcom, onOpenJson, onExportSvg, onSaveJson, onStart
       </button>
       {open && (
         <div style={fileMenuDropdown}>
-          {menuItem('gedcom', 'Import GEDCOM…', onImportGedcom)}
-          {menuItem('open-json', 'Open JSON…', onOpenJson)}
+          {menuItem('gedcom', 'Import GEDCOM…', onImportGedcom, { sublabel: 'Creates a new genogram' })}
+          {menuItem('open-json', 'Import from JSON…', onOpenJson, { sublabel: 'Restore a backup' })}
           <div style={fileMenuSep} />
-          {menuItem('export-svg', 'Export SVG', onExportSvg, { itemDisabled: disabled })}
-          {menuItem('save-json', 'Save JSON', onSaveJson, { itemDisabled: disabled })}
+          {menuItem('export-svg', 'Export SVG', onExportSvg, { itemDisabled: disabled, sublabel: 'Vector image' })}
+          {menuItem('save-json', 'Backup to JSON', onSaveJson, { itemDisabled: disabled, sublabel: 'Save your work to a file' })}
           <div style={fileMenuSep} />
-          {menuItem('start-over', 'Start Over', onStartOver, { danger: true, itemDisabled: disabled })}
+          {menuItem('start-over', 'Start Over', onStartOver, { danger: true, itemDisabled: disabled, sublabel: 'Clear the current genogram' })}
         </div>
       )}
     </div>
@@ -1195,6 +1201,10 @@ const toolbar: React.CSSProperties = {
   display: 'flex', alignItems: 'center', padding: '8px 12px', minHeight: 50,
   background: C.bg, borderBottom: `1px solid ${C.border}`, flexShrink: 0,
   flexWrap: 'wrap', gap: 6,
+  // Stack above the React Flow renderer (z-4), GenogramConnections (z-3), and
+  // the SelectionToolbar (z-5) so panned-up nodes can't bleed through the
+  // chrome into the header / legend / footer.
+  position: 'relative', zIndex: 10,
 }
 const logo: React.CSSProperties = {
   fontFamily: 'sans-serif', fontWeight: 700, fontSize: 15, color: C.text, letterSpacing: '-0.01em',
@@ -1235,6 +1245,7 @@ const btnPrimary: React.CSSProperties = { ...btn, background: '#1a1a1a', color: 
 const legend: React.CSSProperties = {
   display: 'flex', alignItems: 'center', gap: 12, padding: '5px 16px',
   background: C.bg, borderBottom: `1px solid ${C.border}`, flexShrink: 0, flexWrap: 'wrap',
+  position: 'relative', zIndex: 10,
 }
 const divider: React.CSSProperties = {
   display: 'inline-block', width: 1, height: 16, background: C.borderStrong, margin: '0 4px',
@@ -1245,6 +1256,7 @@ const footer: React.CSSProperties = {
   height: 26, padding: '0 16px', flexShrink: 0,
   background: C.bg, borderTop: `1px solid ${C.border}`,
   fontSize: 11, fontFamily: 'sans-serif', color: C.textMuted,
+  position: 'relative', zIndex: 10,
 }
 const empty: React.CSSProperties = {
   width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
