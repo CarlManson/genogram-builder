@@ -333,7 +333,7 @@ export default function PersonEditor({
           {person && (
             <button style={s.deleteBtn} onClick={() => { onDelete(form.id); onClose() }}>Delete</button>
           )}
-          {isNew && onSaveAndAddNext ? (
+          {onSaveAndAddNext ? (
             <div ref={saveMenuRef} style={s.saveSplit}>
               <button style={s.saveMain} onClick={handleSave}>Save</button>
               <button
