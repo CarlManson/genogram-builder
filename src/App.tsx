@@ -892,6 +892,7 @@ export default function App() {
                 onNodeDragStop={onNodeDragStop}
                 nodeTypes={nodeTypes}
                 fitView
+                fitViewOptions={{ padding: 0.2 }}
                 deleteKeyCode="Delete"
                 multiSelectionKeyCode="Shift"
               >
