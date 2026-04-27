@@ -108,6 +108,26 @@ export default function UserGuideModal({ onClose }: Props) {
             </p>
           </Section>
 
+          <Section title="About GEDCOM files">
+            <p style={s.p}>
+              GEDCOM (<code>.ged</code>) is the standard text format genealogy software
+              uses to share family-tree data. If you've already built a tree on a
+              service like <strong>Ancestry.com</strong> or <strong>MyHeritage.com</strong>,
+              you can export it as a GEDCOM file and import it here rather than
+              re-typing everyone.
+            </p>
+            <ul style={s.ul}>
+              <li><strong>Ancestry.com</strong> — Tree Settings ▸ <em>Export Tree</em>.</li>
+              <li><strong>MyHeritage</strong> — Manage Trees ▸ <em>Export to GEDCOM</em>.</li>
+              <li><strong>FamilySearch</strong>, <strong>Geni</strong>, <strong>Findmypast</strong>, and desktop apps like <strong>Family Tree Maker</strong>, <strong>RootsMagic</strong> and <strong>Gramps</strong> all support GEDCOM export.</li>
+            </ul>
+            <p style={s.p}>
+              Once you have the <code>.ged</code> file, drop it on the GEDCOM
+              import dialog, pick the focal person, and choose how many generations
+              to include above and below them.
+            </p>
+          </Section>
+
           <Section title="Files">
             <ul style={s.ul}>
               <li><strong>Import GEDCOM</strong> — drop a <code>.ged</code> file, choose the focal person, and pick how many generations to include above and below.</li>
