@@ -3,8 +3,10 @@ import {
   Pencil,
   Trash2,
   Sparkles,
-  AlignHorizontalSpaceAround,
-  AlignVerticalSpaceAround,
+  AlignStartHorizontal,
+  AlignStartVertical,
+  AlignHorizontalDistributeCenter,
+  AlignVerticalDistributeCenter,
 } from 'lucide-react'
 
 const NODE_SIZE = 80
@@ -16,10 +18,14 @@ interface Props {
   onCleanDescendants: (id: string) => void
   onAlignHorizontal: (ids: string[]) => void
   onAlignVertical: (ids: string[]) => void
+  onDistributeHorizontal: (ids: string[]) => void
+  onDistributeVertical: (ids: string[]) => void
 }
 
 export default function SelectionToolbar({
-  onEdit, onDelete, onCleanDescendants, onAlignHorizontal, onAlignVertical,
+  onEdit, onDelete, onCleanDescendants,
+  onAlignHorizontal, onAlignVertical,
+  onDistributeHorizontal, onDistributeVertical,
 }: Props) {
   const nodes = useNodes()
   const { x: vpX, y: vpY, zoom } = useViewport()
@@ -38,6 +44,7 @@ export default function SelectionToolbar({
 
   const ids = selected.map(n => n.id)
   const isMulti = selected.length >= 2
+  const canDistribute = selected.length >= 3
 
   return (
     <div
@@ -68,13 +75,25 @@ export default function SelectionToolbar({
         </>
       ) : (
         <>
-          <ToolBtn label="Align horizontally (same row)" onClick={() => onAlignHorizontal(ids)}><AlignHorizontalSpaceAround size={16} /></ToolBtn>
-          <ToolBtn label="Align vertically (same column)" onClick={() => onAlignVertical(ids)}><AlignVerticalSpaceAround size={16} /></ToolBtn>
+          <ToolBtn label="Align tops (same row)" onClick={() => onAlignHorizontal(ids)}><AlignStartHorizontal size={16} /></ToolBtn>
+          <ToolBtn label="Align lefts (same column)" onClick={() => onAlignVertical(ids)}><AlignStartVertical size={16} /></ToolBtn>
+          {canDistribute && (
+            <>
+              <Divider />
+              <ToolBtn label="Distribute horizontally (even gaps left-to-right)" onClick={() => onDistributeHorizontal(ids)}><AlignHorizontalDistributeCenter size={16} /></ToolBtn>
+              <ToolBtn label="Distribute vertically (even gaps top-to-bottom)" onClick={() => onDistributeVertical(ids)}><AlignVerticalDistributeCenter size={16} /></ToolBtn>
+            </>
+          )}
+          <Divider />
           <ToolBtn label={`Delete ${selected.length}`} danger onClick={() => onDelete(ids)}><Trash2 size={16} /></ToolBtn>
         </>
       )}
     </div>
   )
+}
+
+function Divider() {
+  return <div style={{ width: 1, height: 18, background: '#e5e7eb', margin: '0 2px' }} />
 }
 
 function ToolBtn({

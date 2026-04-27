@@ -677,6 +677,31 @@ export default function App() {
     setNodes(ns => ns.map(n => idSet.has(n.id) ? { ...n, position: { ...n.position, x: targetX } } : n))
   }
 
+  // Even spacing between selected nodes along an axis. The leftmost/topmost and
+  // rightmost/bottommost stay put; the middle nodes are moved so each has the
+  // same delta from its neighbours.
+  function distributeSelected(ids: string[], axis: 'x' | 'y') {
+    if (ids.length < 3) return
+    snapshot()
+    const idSet = new Set(ids)
+    const sorted = nodes
+      .filter(n => idSet.has(n.id))
+      .slice()
+      .sort((a, b) => a.position[axis] - b.position[axis])
+    const first = sorted[0].position[axis]
+    const last = sorted[sorted.length - 1].position[axis]
+    const step = (last - first) / (sorted.length - 1)
+    const target = new Map<string, number>()
+    sorted.forEach((n, i) => target.set(n.id, first + i * step))
+    setNodes(ns => ns.map(n => {
+      const t = target.get(n.id)
+      if (t === undefined) return n
+      return { ...n, position: { ...n.position, [axis]: t } }
+    }))
+  }
+  function distributeSelectedHorizontal(ids: string[]) { distributeSelected(ids, 'x') }
+  function distributeSelectedVertical(ids: string[]) { distributeSelected(ids, 'y') }
+
   function cleanUpDescendants(personId: string) {
     // Collect descendants via parent-child links.
     const descendants = new Set<string>()
@@ -958,6 +983,8 @@ export default function App() {
                 onCleanDescendants={cleanUpDescendants}
                 onAlignHorizontal={alignSelectedHorizontal}
                 onAlignVertical={alignSelectedVertical}
+                onDistributeHorizontal={distributeSelectedHorizontal}
+                onDistributeVertical={distributeSelectedVertical}
               />
               <FitViewOnLoad k={fitViewKey} />
             </ReactFlowProvider>
