@@ -232,9 +232,6 @@ function renderFamilies(
         const sibLeft = Math.min(midX, ...childCXs)
         const sibRight = Math.max(midX, ...childCXs)
 
-        lines.push(`<line x1="${midX}" y1="${coupleY}" x2="${midX}" y2="${sibshipY}" stroke="${pc}" stroke-width="${pw}"/>`)
-        lines.push(`<line x1="${sibLeft}" y1="${sibshipY}" x2="${sibRight}" y2="${sibshipY}" stroke="${pc}" stroke-width="${pw}"/>`)
-
         const dateGroups = new Map<string, string[]>()
         const nonDateChildren: string[] = []
 
@@ -248,27 +245,45 @@ function renderFamilies(
           }
         }
 
-        for (const childId of nonDateChildren) {
-          const cp = positions[childId]
-          if (!cp) continue
-          const cx = cp.x + HALF
-          lines.push(`<line x1="${cx}" y1="${sibshipY}" x2="${cx}" y2="${cp.y}" stroke="${pc}" stroke-width="${pw}"/>`)
-        }
+        // Twins-only family: clean wishbone (drop + two diagonals), no sibship.
+        const twinsOnlyIds = nonDateChildren.length === 0 && dateGroups.size === 1
+          ? [...dateGroups.values()][0]
+          : null
 
-        for (const ids of dateGroups.values()) {
-          if (ids.length === 1) {
-            const cp = positions[ids[0]]
+        if (twinsOnlyIds && twinsOnlyIds.length >= 2) {
+          lines.push(`<line x1="${midX}" y1="${coupleY}" x2="${midX}" y2="${sibshipY}" stroke="${pc}" stroke-width="${pw}"/>`)
+          for (const id of twinsOnlyIds) {
+            const cp = positions[id]
+            if (!cp) continue
+            const cx = cp.x + HALF
+            lines.push(`<line x1="${midX}" y1="${sibshipY}" x2="${cx}" y2="${cp.y}" stroke="${pc}" stroke-width="${pw}"/>`)
+          }
+        } else {
+          lines.push(`<line x1="${midX}" y1="${coupleY}" x2="${midX}" y2="${sibshipY}" stroke="${pc}" stroke-width="${pw}"/>`)
+          lines.push(`<line x1="${sibLeft}" y1="${sibshipY}" x2="${sibRight}" y2="${sibshipY}" stroke="${pc}" stroke-width="${pw}"/>`)
+
+          for (const childId of nonDateChildren) {
+            const cp = positions[childId]
             if (!cp) continue
             const cx = cp.x + HALF
             lines.push(`<line x1="${cx}" y1="${sibshipY}" x2="${cx}" y2="${cp.y}" stroke="${pc}" stroke-width="${pw}"/>`)
-          } else {
-            const cPositions = ids.map(id => positions[id]).filter(Boolean) as { x: number; y: number }[]
-            const avgCX = cPositions.reduce((sum, p) => sum + p.x + HALF, 0) / cPositions.length
-            for (const id of ids) {
-              const cp = positions[id]
+          }
+
+          for (const ids of dateGroups.values()) {
+            if (ids.length === 1) {
+              const cp = positions[ids[0]]
               if (!cp) continue
               const cx = cp.x + HALF
-              lines.push(`<line x1="${avgCX}" y1="${sibshipY}" x2="${cx}" y2="${cp.y}" stroke="${pc}" stroke-width="${pw}"/>`)
+              lines.push(`<line x1="${cx}" y1="${sibshipY}" x2="${cx}" y2="${cp.y}" stroke="${pc}" stroke-width="${pw}"/>`)
+            } else {
+              const cPositions = ids.map(id => positions[id]).filter(Boolean) as { x: number; y: number }[]
+              const avgCX = cPositions.reduce((sum, p) => sum + p.x + HALF, 0) / cPositions.length
+              for (const id of ids) {
+                const cp = positions[id]
+                if (!cp) continue
+                const cx = cp.x + HALF
+                lines.push(`<line x1="${avgCX}" y1="${sibshipY}" x2="${cx}" y2="${cp.y}" stroke="${pc}" stroke-width="${pw}"/>`)
+              }
             }
           }
         }

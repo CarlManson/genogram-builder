@@ -176,11 +176,6 @@ export default function GenogramConnections({ relationships, onCoupleDoubleClick
         const hovered = hoveredKey === familyKey
         const stroke = hovered && !isSingleParent ? HOVER_COLOR : pcColor
 
-        visibles.push(
-          <line key={`drop-${familyKey}`} x1={midX} y1={coupleY} x2={midX} y2={sibshipY} stroke={stroke} strokeWidth={pcWidth} style={{ pointerEvents: 'none' }} />,
-          <line key={`sib-${familyKey}`} x1={sibLeft} y1={sibshipY} x2={sibRight} y2={sibshipY} stroke={stroke} strokeWidth={pcWidth} style={{ pointerEvents: 'none' }} />
-        )
-
         // Group children by birthDate to detect twins
         const dateGroups = new Map<string, string[]>()
         const nonDateChildren: string[] = []
@@ -195,28 +190,52 @@ export default function GenogramConnections({ relationships, onCoupleDoubleClick
           }
         }
 
-        for (const childId of nonDateChildren) {
-          const cp = posMap.get(childId)
-          if (!cp) continue
-          const cx = cp.x + NW / 2
-          visibles.push(<line key={`child-${familyKey}-${childId}`} x1={cx} y1={sibshipY} x2={cx} y2={cp.y} stroke={pcColor} strokeWidth={pcWidth} style={{ pointerEvents: 'none' }} />)
-        }
+        // Twins-only family: every child shares the same birthdate. Render as a
+        // wishbone — straight drop from couple, two diagonals out to each twin —
+        // instead of drop + horizontal sibship + converging fan.
+        const twinsOnlyIds = nonDateChildren.length === 0 && dateGroups.size === 1
+          ? [...dateGroups.values()][0]
+          : null
 
-        for (const [, ids] of dateGroups.entries()) {
-          if (ids.length === 1) {
-            const cp = posMap.get(ids[0])
+        if (twinsOnlyIds && twinsOnlyIds.length >= 2) {
+          visibles.push(
+            <line key={`drop-${familyKey}`} x1={midX} y1={coupleY} x2={midX} y2={sibshipY} stroke={stroke} strokeWidth={pcWidth} style={{ pointerEvents: 'none' }} />
+          )
+          for (const id of twinsOnlyIds) {
+            const cp = posMap.get(id)
             if (!cp) continue
             const cx = cp.x + NW / 2
-            visibles.push(<line key={`child-${familyKey}-${ids[0]}`} x1={cx} y1={sibshipY} x2={cx} y2={cp.y} stroke={pcColor} strokeWidth={pcWidth} style={{ pointerEvents: 'none' }} />)
-          } else {
-            // Twins! Converge to a single point on sibship line (average of their horizontal positions)
-            const cPositions = ids.map(id => posMap.get(id)).filter(Boolean) as { x: number; y: number }[]
-            const avgCX = cPositions.reduce((sum, p) => sum + p.x + NW / 2, 0) / cPositions.length
-            for (const id of ids) {
-              const cp = posMap.get(id)
+            visibles.push(<line key={`child-${familyKey}-${id}`} x1={midX} y1={sibshipY} x2={cx} y2={cp.y} stroke={pcColor} strokeWidth={pcWidth} style={{ pointerEvents: 'none' }} />)
+          }
+        } else {
+          visibles.push(
+            <line key={`drop-${familyKey}`} x1={midX} y1={coupleY} x2={midX} y2={sibshipY} stroke={stroke} strokeWidth={pcWidth} style={{ pointerEvents: 'none' }} />,
+            <line key={`sib-${familyKey}`} x1={sibLeft} y1={sibshipY} x2={sibRight} y2={sibshipY} stroke={stroke} strokeWidth={pcWidth} style={{ pointerEvents: 'none' }} />
+          )
+
+          for (const childId of nonDateChildren) {
+            const cp = posMap.get(childId)
+            if (!cp) continue
+            const cx = cp.x + NW / 2
+            visibles.push(<line key={`child-${familyKey}-${childId}`} x1={cx} y1={sibshipY} x2={cx} y2={cp.y} stroke={pcColor} strokeWidth={pcWidth} style={{ pointerEvents: 'none' }} />)
+          }
+
+          for (const [, ids] of dateGroups.entries()) {
+            if (ids.length === 1) {
+              const cp = posMap.get(ids[0])
               if (!cp) continue
               const cx = cp.x + NW / 2
-              visibles.push(<line key={`child-${familyKey}-${id}`} x1={avgCX} y1={sibshipY} x2={cx} y2={cp.y} stroke={pcColor} strokeWidth={pcWidth} style={{ pointerEvents: 'none' }} />)
+              visibles.push(<line key={`child-${familyKey}-${ids[0]}`} x1={cx} y1={sibshipY} x2={cx} y2={cp.y} stroke={pcColor} strokeWidth={pcWidth} style={{ pointerEvents: 'none' }} />)
+            } else {
+              // Twins among siblings: converge at a point on the sibship line.
+              const cPositions = ids.map(id => posMap.get(id)).filter(Boolean) as { x: number; y: number }[]
+              const avgCX = cPositions.reduce((sum, p) => sum + p.x + NW / 2, 0) / cPositions.length
+              for (const id of ids) {
+                const cp = posMap.get(id)
+                if (!cp) continue
+                const cx = cp.x + NW / 2
+                visibles.push(<line key={`child-${familyKey}-${id}`} x1={avgCX} y1={sibshipY} x2={cx} y2={cp.y} stroke={pcColor} strokeWidth={pcWidth} style={{ pointerEvents: 'none' }} />)
+              }
             }
           }
         }
