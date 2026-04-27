@@ -80,6 +80,14 @@ export default function App() {
   })
 
   const [editPerson, setEditPerson] = useState<Person | null | 'new'>(null)
+
+  // Move-mode interaction: a single click selects (React Flow default); a
+  // second click on the same selected node toggles move mode, where dragging
+  // slides only that person horizontally — the same path that Shift+drag
+  // takes (kept for power users). Cleared on drag end, pane click, double
+  // click, or selecting a different node.
+  const [lastClickedId, setLastClickedId] = useState<string | null>(null)
+  const [moveMode, setMoveMode] = useState(false)
   const [newPersonSeed, setNewPersonSeed] = useState<{ relContext?: RelContext; parents?: ParentIds; key: number } | null>(null)
   const [editRel, setEditRel] = useState<Relationship | null | 'new'>(null)
   const [showGedcom, setShowGedcom] = useState(false)
@@ -321,8 +329,31 @@ export default function App() {
   }
 
   // --- React Flow Callbacks ---
+  const onNodeClick: NodeMouseHandler = useCallback((e, node) => {
+    // Shift/⌘/Ctrl click is multi-select — don't toggle move mode.
+    if (e.shiftKey || e.metaKey || e.ctrlKey) {
+      setLastClickedId(node.id)
+      setMoveMode(false)
+      return
+    }
+    setLastClickedId(prevId => {
+      if (prevId === node.id) {
+        setMoveMode(m => !m)
+      } else {
+        setMoveMode(false)
+      }
+      return node.id
+    })
+  }, [])
+
+  const onPaneClick = useCallback(() => {
+    setLastClickedId(null)
+    setMoveMode(false)
+  }, [])
+
   const onNodeDoubleClick: NodeMouseHandler = useCallback(
     (_event, node) => {
+      setMoveMode(false)
       const person = people.find(p => p.id === node.id)
       if (person) setEditPerson(person)
     },
@@ -378,7 +409,9 @@ export default function App() {
 
   const onNodeDragStart: NodeMouseHandler = useCallback((e, node) => {
     snapshotFnRef.current()   // make drag undoable
-    const shiftOnly = e.shiftKey
+    // Spouse-only drag triggers from either Shift+drag (legacy) or the new
+    // move mode (click an already-selected node to toggle on, then drag).
+    const shiftOnly = e.shiftKey || (moveMode && lastClickedId === node.id)
     const { group, coupleNetworkIds } = shiftOnly
       ? { group: new Set([node.id]), coupleNetworkIds: new Set([node.id]) }
       : getFamilyGroup(node.id)
@@ -387,7 +420,7 @@ export default function App() {
       if (group.has(n.id)) groupStartPositions[n.id] = { ...n.position }
     }
     dragGroupRef.current = { nodeId: node.id, startPos: { ...node.position }, groupStartPositions, shiftOnly, coupleNetworkIds }
-  }, [nodes, relationships]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [nodes, relationships, moveMode, lastClickedId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const onNodeDrag: NodeMouseHandler = useCallback((_e, node) => {
     const ref = dragGroupRef.current
@@ -415,6 +448,7 @@ export default function App() {
 
   const onNodeDragStop: NodeMouseHandler = useCallback(() => {
     dragGroupRef.current = null
+    setMoveMode(false)
   }, [])
 
   function getSmartPosition(relContext: RelContext): { x: number; y: number } {
@@ -862,12 +896,12 @@ export default function App() {
           <LegendItem label="Cohabiting" line="dashed" />
           <LegendItem label="Twins" line="twins" />
           <span style={divider} />
-          <span style={hint}>Double-click to edit · Drag moves family · Shift+drag slides spouse horizontally</span>
+          <span style={hint}>Click to select · Click again to slide spouse · Drag = move family · Double-click to edit</span>
         </div>
       )}
 
       {/* Canvas — explicitly light so the build area stays bright while the chrome above/below is dark */}
-      <div style={{ flex: 1, background: '#fafaf9' }}>
+      <div style={{ flex: 1, background: '#fafaf9', cursor: moveMode ? 'ew-resize' : undefined }}>
         {people.length === 0 && relationships.length === 0 ? (
           <div style={empty}>
             <div style={emptyBox}>
@@ -886,6 +920,8 @@ export default function App() {
                 nodes={nodes}
                 edges={[]}
                 onNodesChange={handleNodesChange}
+                onNodeClick={onNodeClick}
+                onPaneClick={onPaneClick}
                 onNodeDoubleClick={onNodeDoubleClick}
                 onNodeDragStart={onNodeDragStart}
                 onNodeDrag={onNodeDrag}
