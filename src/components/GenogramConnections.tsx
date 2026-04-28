@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useCallback } from 'react'
 import { useNodes, useViewport } from '@xyflow/react'
 import { Person, Relationship } from '../lib/types'
 import { buildFamilies } from '../lib/families'
@@ -7,22 +7,33 @@ import { useSettings } from '../lib/SettingsContext'
 const NW = 80
 const NH = 80
 const SIBSHIP_GAP = 28
-// Twin signal: distance to drop below the sibship line before the V fans out,
-// so the wishbone reads as its own marker instead of a flap on the sibship.
 const TWIN_APEX_DROP = 12
 const HOVER_COLOR = '#3b82f6'
 
 interface Props {
   relationships: Relationship[]
+  sibshipOffsets?: Record<string, number>
   onCoupleDoubleClick?: (relId: string) => void
+  onParentChildDoubleClick?: (relId: string) => void
+  onSibshipDragStart?: () => void
+  onSibshipOffsetChange?: (familyId: string, offset: number) => void
 }
 
-export default function GenogramConnections({ relationships, onCoupleDoubleClick }: Props) {
+export default function GenogramConnections({ relationships, sibshipOffsets, onCoupleDoubleClick, onParentChildDoubleClick, onSibshipDragStart, onSibshipOffsetChange }: Props) {
   const nodes = useNodes()
   const settings = useSettings()
   const design = settings.design
   const { x: vpX, y: vpY, zoom } = useViewport()
   const [hoveredKey, setHoveredKey] = useState<string | null>(null)
+  const [hoveredChildRelId, setHoveredChildRelId] = useState<string | null>(null)
+  const [draggingSibship, setDraggingSibship] = useState<string | null>(null)
+
+  // Track drag start in screen coords so we can compute delta
+  const sibshipDragRef = useRef<{
+    familyId: string
+    startScreenY: number
+    startOffset: number
+  } | null>(null)
 
   const coupleColor = design.coupleLineColor
   const coupleWidth = design.coupleLineThickness
@@ -45,6 +56,37 @@ export default function GenogramConnections({ relationships, onCoupleDoubleClick
     if (r.location) locationById.set(r.id, r.location)
   }
 
+  // parent-child relationship lookup: "parentId:childId" → rel id
+  const pcRelById = new Map<string, string>()
+  for (const r of relationships) {
+    if (r.type === 'parent-child') {
+      pcRelById.set(`${r.sourceId}:${r.targetId}`, r.id)
+    }
+  }
+
+  // Sibship handle drag handlers — attached to the SVG element so the drag
+  // doesn't break when the cursor moves faster than the handle.
+  const onSvgMouseMove = useCallback((e: React.MouseEvent<SVGSVGElement>) => {
+    const ref = sibshipDragRef.current
+    if (!ref) return
+    const deltaScreen = e.clientY - ref.startScreenY
+    const deltaCanvas = deltaScreen / zoom
+    onSibshipOffsetChange?.(ref.familyId, ref.startOffset + deltaCanvas)
+  }, [zoom, onSibshipOffsetChange])
+
+  const onSvgMouseUp = useCallback(() => {
+    sibshipDragRef.current = null
+    setDraggingSibship(null)
+  }, [])
+
+  function startSibshipDrag(e: React.MouseEvent, familyId: string, currentOffset: number) {
+    e.stopPropagation()
+    e.preventDefault()
+    onSibshipDragStart?.()
+    sibshipDragRef.current = { familyId, startScreenY: e.clientY, startOffset: currentOffset }
+    setDraggingSibship(familyId)
+  }
+
   function hitLine(
     key: string, familyKey: string,
     props: React.SVGProps<SVGLineElement>,
@@ -63,15 +105,41 @@ export default function GenogramConnections({ relationships, onCoupleDoubleClick
     )
   }
 
+  // Returns the id of the first parent-child relationship from this family to childId.
+  function pcRelId(parentIds: string[], childId: string): string | undefined {
+    for (const pid of parentIds) {
+      const id = pcRelById.get(`${pid}:${childId}`)
+      if (id) return id
+    }
+    return undefined
+  }
+
+  function childHitLine(key: string, familyKey: string, parentIds: string[], childId: string, x1: number, y1: number, x2: number, y2: number) {
+    const relId = pcRelId(parentIds, childId)
+    return (
+      <line
+        key={key}
+        x1={x1} y1={y1} x2={x2} y2={y2}
+        stroke="transparent"
+        strokeWidth={16}
+        style={{ pointerEvents: 'stroke', cursor: relId ? 'pointer' : 'default' }}
+        onMouseEnter={() => { setHoveredKey(familyKey); if (relId) setHoveredChildRelId(relId) }}
+        onMouseLeave={() => { setHoveredKey(null); setHoveredChildRelId(null) }}
+        onDoubleClick={relId ? () => onParentChildDoubleClick?.(relId) : undefined}
+      />
+    )
+  }
+
   const visibles: React.ReactNode[] = []
   const hits: React.ReactNode[] = []
+  // Drag handles rendered on top of everything else
+  const handles: React.ReactNode[] = []
 
   // --- Focal Ellipse ---
   if (settings.showFocalEllipse && settings.focalPersonId) {
     const p1Id = settings.focalPersonId
     const p1Pos = posMap.get(p1Id)
     if (p1Pos) {
-      // Find a spouse
       const rel = relationships.find(r => r.type !== 'parent-child' && (r.sourceId === p1Id || r.targetId === p1Id))
       const p2Id = rel ? (rel.sourceId === p1Id ? rel.targetId : rel.sourceId) : undefined
       const p2Pos = p2Id ? posMap.get(p2Id) : undefined
@@ -146,8 +214,6 @@ export default function GenogramConnections({ relationships, onCoupleDoubleClick
       )
       hits.push(hitLine(`hit-couple-${familyKey}`, familyKey, { x1, y1: coupleY, x2, y2: coupleY, strokeDasharray: dash }, { wide: true, onDoubleClick: coupleRelId ? () => onCoupleDoubleClick?.(coupleRelId) : undefined }))
 
-      // Slashes are offset 12px left of midX so they don't overlap the
-      // vertical drop line which descends from exactly midX.
       const slashCx = midX - 12
       if (family.coupleType === 'divorced') {
         visibles.push(
@@ -167,14 +233,11 @@ export default function GenogramConnections({ relationships, onCoupleDoubleClick
       familyKey = `single-${p1Id}`
     }
 
-    // Returns the SVG stroke-dasharray for the child-vertical based on the
-    // natures of every parent-child relationship pointing at this child from
-    // this family's parents. All-adopted → dashed, all-foster → dotted, else
-    // solid. Mixed nature falls back to solid since the convention is per-rel.
+    const familyParentIds = [p1Id, p2Id].filter(Boolean) as string[]
+
     const childDash = (childId: string): string | undefined => {
-      const parentIds = [p1Id, p2Id].filter(Boolean) as string[]
       const childRels = relationships.filter(r =>
-        r.type === 'parent-child' && r.targetId === childId && parentIds.includes(r.sourceId)
+        r.type === 'parent-child' && r.targetId === childId && familyParentIds.includes(r.sourceId)
       )
       if (childRels.length === 0) return undefined
       const natures = childRels.map(r => r.nature ?? 'biological')
@@ -187,18 +250,20 @@ export default function GenogramConnections({ relationships, onCoupleDoubleClick
       const childData = family.childIds.map(id => ({ id, pos: posMap.get(id), p: personMap.get(id) })).filter(d => d.pos && d.p)
       if (childData.length > 0) {
         const minChildY = Math.min(...childData.map(d => d.pos!.y))
-        sibshipY = Math.max(coupleY + (isSingleParent ? 10 : 20), minChildY - SIBSHIP_GAP)
+        const baseSibshipY = Math.max(coupleY + (isSingleParent ? 10 : 20), minChildY - SIBSHIP_GAP)
+        const offset = sibshipOffsets?.[family.id] ?? 0
+        sibshipY = baseSibshipY + offset
 
         const hovered = hoveredKey === familyKey
+        const isDragging = draggingSibship === family.id
         const stroke = hovered && !isSingleParent ? HOVER_COLOR : pcColor
 
-        // Group children by birthDate to detect twins
         const dateGroups = new Map<string, string[]>()
         const nonDateChildren: string[] = []
 
         for (const child of childData) {
           const bd = child.p!.birthDate
-          if (bd && bd.length >= 10) { // Only auto-detect if full date YYYY-MM-DD
+          if (bd && bd.length >= 10) {
             if (!dateGroups.has(bd)) dateGroups.set(bd, [])
             dateGroups.get(bd)!.push(child.id)
           } else {
@@ -206,9 +271,6 @@ export default function GenogramConnections({ relationships, onCoupleDoubleClick
           }
         }
 
-        // Twins-only family: every child shares the same birthdate. Render as a
-        // wishbone — straight drop from couple, two diagonals out to each twin —
-        // instead of drop + horizontal sibship + converging fan.
         const twinsOnlyIds = nonDateChildren.length === 0 && dateGroups.size === 1
           ? [...dateGroups.values()][0]
           : null
@@ -221,12 +283,26 @@ export default function GenogramConnections({ relationships, onCoupleDoubleClick
             const cp = posMap.get(id)
             if (!cp) continue
             const cx = cp.x + NW / 2
-            visibles.push(<line key={`child-${familyKey}-${id}`} x1={midX} y1={sibshipY} x2={cx} y2={cp.y} stroke={pcColor} strokeWidth={pcWidth} strokeDasharray={childDash(id)} style={{ pointerEvents: 'none' }} />)
+            const cRelId = pcRelId(familyParentIds, id)
+            const cHovered = !!cRelId && hoveredChildRelId === cRelId
+            visibles.push(<line key={`child-${familyKey}-${id}`} x1={midX} y1={sibshipY} x2={cx} y2={cp.y} stroke={cHovered ? HOVER_COLOR : pcColor} strokeWidth={cHovered ? pcWidth + 1 : pcWidth} strokeDasharray={childDash(id)} style={{ pointerEvents: 'none' }} />)
+            hits.push(childHitLine(`hit-child-${familyKey}-${id}`, familyKey, familyParentIds, id, midX, sibshipY, cx, cp.y))
+          }
+
+          // Drag handle on the drop line midpoint for twins-only
+          if (onSibshipOffsetChange) {
+            const handleY = (coupleY + sibshipY) / 2
+            handles.push(
+              <SibshipHandle
+                key={`sib-handle-${family.id}`}
+                x={midX}
+                y={handleY}
+                active={isDragging}
+                onMouseDown={e => startSibshipDrag(e, family.id, offset)}
+              />
+            )
           }
         } else {
-          // Build the list of points where the sibship line is "tapped":
-          // a non-twin child contributes its own cx; a twin group contributes
-          // its wishbone-stem cx (avgCX), not the twins' individual cxs.
           const sibConnectionXs: number[] = []
           for (const childId of nonDateChildren) {
             const cp = posMap.get(childId)
@@ -256,7 +332,10 @@ export default function GenogramConnections({ relationships, onCoupleDoubleClick
             const cp = posMap.get(childId)
             if (!cp) continue
             const cx = cp.x + NW / 2
-            visibles.push(<line key={`child-${familyKey}-${childId}`} x1={cx} y1={sibshipY} x2={cx} y2={cp.y} stroke={pcColor} strokeWidth={pcWidth} strokeDasharray={childDash(childId)} style={{ pointerEvents: 'none' }} />)
+            const cRelId = pcRelId(familyParentIds, childId)
+            const cHovered = !!cRelId && hoveredChildRelId === cRelId
+            visibles.push(<line key={`child-${familyKey}-${childId}`} x1={cx} y1={sibshipY} x2={cx} y2={cp.y} stroke={cHovered ? HOVER_COLOR : pcColor} strokeWidth={cHovered ? pcWidth + 1 : pcWidth} strokeDasharray={childDash(childId)} style={{ pointerEvents: 'none' }} />)
+            hits.push(childHitLine(`hit-child-${familyKey}-${childId}`, familyKey, familyParentIds, childId, cx, sibshipY, cx, cp.y))
           }
 
           for (const ids of dateGroups.values()) {
@@ -264,7 +343,10 @@ export default function GenogramConnections({ relationships, onCoupleDoubleClick
               const cp = posMap.get(ids[0])
               if (!cp) continue
               const cx = cp.x + NW / 2
-              visibles.push(<line key={`child-${familyKey}-${ids[0]}`} x1={cx} y1={sibshipY} x2={cx} y2={cp.y} stroke={pcColor} strokeWidth={pcWidth} strokeDasharray={childDash(ids[0])} style={{ pointerEvents: 'none' }} />)
+              const cRelId = pcRelId(familyParentIds, ids[0])
+              const cHovered = !!cRelId && hoveredChildRelId === cRelId
+              visibles.push(<line key={`child-${familyKey}-${ids[0]}`} x1={cx} y1={sibshipY} x2={cx} y2={cp.y} stroke={cHovered ? HOVER_COLOR : pcColor} strokeWidth={cHovered ? pcWidth + 1 : pcWidth} strokeDasharray={childDash(ids[0])} style={{ pointerEvents: 'none' }} />)
+              hits.push(childHitLine(`hit-child-${familyKey}-${ids[0]}`, familyKey, familyParentIds, ids[0], cx, sibshipY, cx, cp.y))
             }
           }
 
@@ -275,8 +357,25 @@ export default function GenogramConnections({ relationships, onCoupleDoubleClick
               const cp = posMap.get(id)
               if (!cp) continue
               const cx = cp.x + NW / 2
-              visibles.push(<line key={`child-${familyKey}-${id}`} x1={avgCX} y1={apexY} x2={cx} y2={cp.y} stroke={pcColor} strokeWidth={pcWidth} strokeDasharray={childDash(id)} style={{ pointerEvents: 'none' }} />)
+              const cRelId = pcRelId(familyParentIds, id)
+              const cHovered = !!cRelId && hoveredChildRelId === cRelId
+              visibles.push(<line key={`child-${familyKey}-${id}`} x1={avgCX} y1={apexY} x2={cx} y2={cp.y} stroke={cHovered ? HOVER_COLOR : pcColor} strokeWidth={cHovered ? pcWidth + 1 : pcWidth} strokeDasharray={childDash(id)} style={{ pointerEvents: 'none' }} />)
+              hits.push(childHitLine(`hit-child-${familyKey}-${id}`, familyKey, familyParentIds, id, avgCX, apexY, cx, cp.y))
             }
+          }
+
+          // Drag handle sits at the midpoint of the sibship line
+          if (onSibshipOffsetChange) {
+            const handleX = (sibLeft + sibRight) / 2
+            handles.push(
+              <SibshipHandle
+                key={`sib-handle-${family.id}`}
+                x={handleX}
+                y={sibshipY}
+                active={isDragging}
+                onMouseDown={e => startSibshipDrag(e, family.id, offset)}
+              />
+            )
           }
         }
       }
@@ -284,11 +383,56 @@ export default function GenogramConnections({ relationships, onCoupleDoubleClick
   }
 
   return (
-    <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', overflow: 'visible', pointerEvents: 'none', zIndex: 3 }}>
+    <svg
+      style={{
+        position: 'absolute', inset: 0, width: '100%', height: '100%',
+        overflow: 'visible', pointerEvents: draggingSibship ? 'all' : 'none', zIndex: 3,
+        cursor: draggingSibship ? 'ns-resize' : undefined,
+      }}
+      onMouseMove={onSvgMouseMove}
+      onMouseUp={onSvgMouseUp}
+      onMouseLeave={onSvgMouseUp}
+    >
       <g transform={`translate(${vpX},${vpY}) scale(${zoom})`}>
         {visibles}
         {hits}
+        {handles}
       </g>
     </svg>
+  )
+}
+
+// Small pill handle rendered on the sibship line. Has its own pointer-events
+// so it can receive mouse-down even though the parent SVG is pointerEvents:none.
+function SibshipHandle({ x, y, active, onMouseDown }: {
+  x: number
+  y: number
+  active: boolean
+  onMouseDown: (e: React.MouseEvent) => void
+}) {
+  const [hovered, setHovered] = useState(false)
+  const w = 28
+  const h = 8
+  const show = hovered || active
+  return (
+    <g
+      style={{ pointerEvents: 'all', cursor: 'ns-resize' }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      onMouseDown={onMouseDown}
+    >
+      {/* Invisible fat hit area */}
+      <rect x={x - w / 2 - 4} y={y - 10} width={w + 8} height={20} fill="transparent" />
+      {/* Visible pill — only shown on hover / active drag */}
+      {show && (
+        <rect
+          x={x - w / 2} y={y - h / 2}
+          width={w} height={h}
+          rx={4}
+          fill={active ? HOVER_COLOR : '#94a3b8'}
+          opacity={0.85}
+        />
+      )}
+    </g>
   )
 }

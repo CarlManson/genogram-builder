@@ -70,6 +70,7 @@ export default function App() {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([])
   const [people, setPeople] = useState<Person[]>([])
   const [relationships, setRelationships] = useState<Relationship[]>([])
+  const [sibshipOffsets, setSibshipOffsets] = useState<Record<string, number>>({})
   const [projects, setProjects] = useState<Project[]>([])
   const [activeProjectId, setActiveProjectId] = useState<string>('')
 
@@ -141,7 +142,7 @@ export default function App() {
   snapshotFnRef.current = () => {
     const nodePositions: Record<string, { x: number; y: number }> = {}
     for (const n of nodes) nodePositions[n.id] = n.position
-    const snap: GenogramData = { people, relationships, nodePositions }
+    const snap: GenogramData = { people, relationships, nodePositions, sibshipOffsets }
     setUndoStack(prev => [...prev.slice(-49), snap])
     setRedoStack([])
   }
@@ -153,9 +154,10 @@ export default function App() {
       const prev = stack[stack.length - 1]
       const nodePositions: Record<string, { x: number; y: number }> = {}
       for (const n of nodes) nodePositions[n.id] = n.position
-      setRedoStack(r => [...r.slice(-49), { people, relationships, nodePositions }])
+      setRedoStack(r => [...r.slice(-49), { people, relationships, nodePositions, sibshipOffsets }])
       setPeople(prev.people)
       setRelationships(prev.relationships)
+      setSibshipOffsets(prev.sibshipOffsets ?? {})
       setNodes(genogramToNodes(prev))
       return stack.slice(0, -1)
     })
@@ -167,9 +169,10 @@ export default function App() {
       const next = stack[stack.length - 1]
       const nodePositions: Record<string, { x: number; y: number }> = {}
       for (const n of nodes) nodePositions[n.id] = n.position
-      setUndoStack(u => [...u.slice(-49), { people, relationships, nodePositions }])
+      setUndoStack(u => [...u.slice(-49), { people, relationships, nodePositions, sibshipOffsets }])
       setPeople(next.people)
       setRelationships(next.relationships)
+      setSibshipOffsets(next.sibshipOffsets ?? {})
       setNodes(genogramToNodes(next))
       return stack.slice(0, -1)
     })
@@ -244,6 +247,7 @@ export default function App() {
   function loadProject(project: Project) {
     setPeople(project.data.people)
     setRelationships(project.data.relationships)
+    setSibshipOffsets(project.data.sibshipOffsets ?? {})
     setNodes(genogramToNodes(project.data))
     setUndoStack([])
     setRedoStack([])
@@ -255,19 +259,19 @@ export default function App() {
     if (!activeProjectId) return
     const nodePositions: Record<string, { x: number; y: number }> = {}
     for (const n of nodes) nodePositions[n.id] = n.position
-    
-    const currentData: GenogramData = { people, relationships, nodePositions }
-    
+
+    const currentData: GenogramData = { people, relationships, nodePositions, sibshipOffsets }
+
     setProjects(ps => {
-      const updated = ps.map(p => p.id === activeProjectId 
-        ? { ...p, data: currentData, lastModified: Date.now() } 
+      const updated = ps.map(p => p.id === activeProjectId
+        ? { ...p, data: currentData, lastModified: Date.now() }
         : p
       )
       localStorage.setItem(LS_PROJECTS_KEY, JSON.stringify(updated))
       return updated
     })
     localStorage.setItem(LS_ACTIVE_ID_KEY, activeProjectId)
-  }, [people, relationships, nodes, activeProjectId])
+  }, [people, relationships, nodes, sibshipOffsets, activeProjectId])
 
   useEffect(() => {
     localStorage.setItem(LS_SETTINGS_KEY, JSON.stringify(settings))
@@ -343,7 +347,16 @@ export default function App() {
     snapshot()
     setPeople([])
     setRelationships([])
+    setSibshipOffsets({})
     setNodes([])
+  }
+
+  function handleSibshipDragStart() {
+    snapshot()
+  }
+
+  function handleSibshipOffsetChange(familyId: string, offset: number) {
+    setSibshipOffsets(prev => ({ ...prev, [familyId]: offset }))
   }
 
   // --- React Flow Callbacks ---
@@ -573,11 +586,17 @@ export default function App() {
       .filter(r => r.type === 'parent-child' && r.targetId === personId)
       .map(r => r.sourceId)
     const parents = people.filter(p => parentIds.includes(p.id))
-    const father = parents.find(p => p.sex === 'male')
-    const mother = parents.find(p => p.sex === 'female')
-    const fatherId = father?.id ?? parents[0]?.id
-    const motherId = mother?.id ?? parents.find(p => p.id !== fatherId)?.id
-    return { fatherId, motherId }
+    const male = parents.find(p => p.sex === 'male')
+    const female = parents.find(p => p.sex === 'female')
+    // Slot assignment: male → Parent 1, female → Parent 2.
+    // When both are the same sex, first goes to Parent 1, second to Parent 2.
+    // Avoids putting a female-only parent in Parent 1 and leaving Parent 2 empty.
+    if (male || female) {
+      const fatherId = male?.id ?? parents.find(p => p.sex !== 'female')?.id
+      const motherId = female?.id ?? parents.find(p => p.id !== fatherId)?.id
+      return { fatherId, motherId }
+    }
+    return { fatherId: parents[0]?.id, motherId: parents[1]?.id }
   }
 
   function savePerson(person: Person, relContext?: RelContext, parents?: ParentIds) {
@@ -807,7 +826,7 @@ export default function App() {
   }
 
   function handleExportSvg() {
-    const data: GenogramData = { people, relationships, nodePositions: getCurrentPositions() }
+    const data: GenogramData = { people, relationships, nodePositions: getCurrentPositions(), sibshipOffsets }
     const svg = exportToSvg(data, settings)
     const blob = new Blob([svg], { type: 'image/svg+xml' })
     const url = URL.createObjectURL(blob)
@@ -817,8 +836,11 @@ export default function App() {
   }
 
   function handleExportJson() {
-    const data: GenogramData = { people, relationships, nodePositions: getCurrentPositions() }
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+    const data: GenogramData = { people, relationships, nodePositions: getCurrentPositions(), sibshipOffsets }
+    // Bundle settings alongside data so design choices survive a round-trip to
+    // another browser / device. The wrapper object is detected on import.
+    const payload = { version: 1, data, settings }
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url; a.download = projectFileName('json'); a.click()
@@ -830,8 +852,12 @@ export default function App() {
     if (!file) return
     const reader = new FileReader()
     reader.onload = ev => {
-      try { 
-        const data = JSON.parse(ev.target?.result as string) as GenogramData
+      try {
+        const parsed = JSON.parse(ev.target?.result as string)
+        // Support both the legacy bare-GenogramData format and the new
+        // { version, data, settings } wrapper.
+        const data: GenogramData = parsed.version === 1 ? parsed.data : parsed
+        const importedSettings: Settings | undefined = parsed.version === 1 ? parsed.settings : undefined
         const name = file.name.replace('.json', '')
         const newProject: Project = {
           id: crypto.randomUUID(),
@@ -843,6 +869,13 @@ export default function App() {
         setProjects(updated)
         setActiveProjectId(newProject.id)
         loadProject(newProject)
+        if (importedSettings) {
+          setSettings(s => ({
+            ...s,
+            ...importedSettings,
+            design: { ...DEFAULT_DESIGN, ...(importedSettings.design ?? {}) },
+          }))
+        }
         localStorage.setItem(LS_PROJECTS_KEY, JSON.stringify(updated))
       }
       catch { alert('Invalid JSON file') }
@@ -991,7 +1024,11 @@ export default function App() {
               </ReactFlow>
               <GenogramConnections
                 relationships={relationships}
+                sibshipOffsets={sibshipOffsets}
                 onCoupleDoubleClick={openRelationshipEditor}
+                onParentChildDoubleClick={openRelationshipEditor}
+                onSibshipDragStart={handleSibshipDragStart}
+                onSibshipOffsetChange={handleSibshipOffsetChange}
               />
               <SelectionToolbar
                 onEdit={handleEditFromToolbar}

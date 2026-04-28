@@ -241,7 +241,8 @@ function renderFamilies(
       const childData = family.childIds.map(id => ({ id, pos: positions[id], p: personMap.get(id) })).filter(d => d.pos && d.p)
       if (childData.length > 0) {
         const minChildY = Math.min(...childData.map(d => d.pos!.y))
-        const sibshipY = Math.max(coupleY + (isSingleParent ? 10 : 20), minChildY - SIBSHIP_GAP)
+        const baseSibshipY = Math.max(coupleY + (isSingleParent ? 10 : 20), minChildY - SIBSHIP_GAP)
+        const sibshipY = baseSibshipY + (data.sibshipOffsets?.[family.id] ?? 0)
 
         const dateGroups = new Map<string, string[]>()
         const nonDateChildren: string[] = []

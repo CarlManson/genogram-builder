@@ -231,13 +231,13 @@ export default function PersonEditor({
           <div style={s.relSection}>
             <span style={s.sectionLabel}>Parents</span>
             <div style={s.row}>
-              <label style={{ ...s.label, flex: 1 }}>Father
+              <label style={{ ...s.label, flex: 1 }}>Parent 1
                 <select style={s.input} value={fatherId} onChange={e => setFatherId(e.target.value)}>
                   <option value="">– none –</option>
                   <ParentOptions people={otherPeople} excludeId={motherId} primarySex="male" />
                 </select>
               </label>
-              <label style={{ ...s.label, flex: 1 }}>Mother
+              <label style={{ ...s.label, flex: 1 }}>Parent 2
                 <select style={s.input} value={motherId} onChange={e => setMotherId(e.target.value)}>
                   <option value="">– none –</option>
                   <ParentOptions people={otherPeople} excludeId={fatherId} primarySex="female" />

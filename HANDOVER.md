@@ -42,6 +42,7 @@ npm run build     # production build to dist/
 | **ReactFlowProvider** | Explicitly wraps the canvas in `App.tsx` so `GenogramConnections` (a sibling of `<ReactFlow>`) can use `useNodes()` / `useViewport()` hooks |
 | **Custom SVG overlay** | `GenogramConnections.tsx` renders all relationship lines as an absolutely-positioned SVG sibling of `<ReactFlow>`, at `z-index: 3` (below `.react-flow__renderer` at z-4 so node shapes + below-shape labels paint on top). Necessary because React Flow's edge system can't draw grouped orthogonal genogram lines. |
 | **localStorage** | Multi-project storage. Keys: `genogram-builder-projects-v1` (array of Projects), `genogram-builder-active-id-v1`, `genogram-builder-settings`, `genogram-builder-welcome-seen-v1` (set to `'1'` after the user dismisses the welcome modal — modal is shown once on first visit only). Legacy key `genogram-builder-data` is migrated on first load. |
+| **JSON export format** | `{ version: 1, data: GenogramData, settings: Settings }`. The legacy bare-`GenogramData` format is still accepted on import. Importing a v1 file restores both the genogram and its design settings. |
 
 ---
 
@@ -191,6 +192,8 @@ interface GenogramData {
   people: Person[]
   relationships: Relationship[]
   nodePositions: Record<string, { x: number; y: number }>
+  sibshipOffsets?: Record<string, number>  // per-family vertical Y offset for the sibship line
+                                           // key = family.id (sorted "p1:p2" or "single:pId")
 }
 ```
 

@@ -122,6 +122,9 @@ export interface GenogramData {
   people: Person[]
   relationships: Relationship[]
   nodePositions: Record<string, { x: number; y: number }>
+  // Per-family vertical offset applied to the computed sibship line Y position.
+  // Key = family.id (sorted "p1:p2" for couples, "single:pId" for single parents).
+  sibshipOffsets?: Record<string, number>
 }
 
 export interface Project {
