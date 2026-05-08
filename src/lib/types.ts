@@ -131,5 +131,6 @@ export interface Project {
   id: string
   name: string
   data: GenogramData
+  settings?: Settings
   lastModified: number
 }

@@ -249,6 +249,9 @@ export default function App() {
     setRelationships(project.data.relationships)
     setSibshipOffsets(project.data.sibshipOffsets ?? {})
     setNodes(genogramToNodes(project.data))
+    if (project.settings) {
+      setSettings({ ...DEFAULT_SETTINGS, ...project.settings, design: { ...DEFAULT_DESIGN, ...(project.settings.design ?? {}) } })
+    }
     setUndoStack([])
     setRedoStack([])
     setFitViewKey(k => k + 1)
@@ -264,14 +267,14 @@ export default function App() {
 
     setProjects(ps => {
       const updated = ps.map(p => p.id === activeProjectId
-        ? { ...p, data: currentData, lastModified: Date.now() }
+        ? { ...p, data: currentData, settings, lastModified: Date.now() }
         : p
       )
       localStorage.setItem(LS_PROJECTS_KEY, JSON.stringify(updated))
       return updated
     })
     localStorage.setItem(LS_ACTIVE_ID_KEY, activeProjectId)
-  }, [people, relationships, nodes, sibshipOffsets, activeProjectId])
+  }, [people, relationships, nodes, sibshipOffsets, settings, activeProjectId])
 
   useEffect(() => {
     localStorage.setItem(LS_SETTINGS_KEY, JSON.stringify(settings))
@@ -863,19 +866,15 @@ export default function App() {
           id: crypto.randomUUID(),
           name,
           data,
+          settings: importedSettings
+            ? { ...DEFAULT_SETTINGS, ...importedSettings, design: { ...DEFAULT_DESIGN, ...(importedSettings.design ?? {}) } }
+            : undefined,
           lastModified: Date.now(),
         }
         const updated = [...projects, newProject]
         setProjects(updated)
         setActiveProjectId(newProject.id)
         loadProject(newProject)
-        if (importedSettings) {
-          setSettings(s => ({
-            ...s,
-            ...importedSettings,
-            design: { ...DEFAULT_DESIGN, ...(importedSettings.design ?? {}) },
-          }))
-        }
         localStorage.setItem(LS_PROJECTS_KEY, JSON.stringify(updated))
       }
       catch { alert('Invalid JSON file') }
