@@ -41,7 +41,7 @@ npm run build     # production build to dist/
 | **@xyflow/react v12** | Interactive canvas (pan/zoom/drag nodes). Used for node positioning only — edges are NOT used from React Flow |
 | **ReactFlowProvider** | Explicitly wraps the canvas in `App.tsx` so `GenogramConnections` (a sibling of `<ReactFlow>`) can use `useNodes()` / `useViewport()` hooks |
 | **Custom SVG overlay** | `GenogramConnections.tsx` renders all relationship lines as an absolutely-positioned SVG sibling of `<ReactFlow>`, at `z-index: 3` (below `.react-flow__renderer` at z-4 so node shapes + below-shape labels paint on top). Necessary because React Flow's edge system can't draw grouped orthogonal genogram lines. |
-| **localStorage** | Multi-project storage. Keys: `genogram-builder-projects-v1` (array of Projects), `genogram-builder-active-id-v1`, `genogram-builder-settings`, `genogram-builder-welcome-seen-v1` (set to `'1'` after the user dismisses the welcome modal — modal is shown once on first visit only). Legacy key `genogram-builder-data` is migrated on first load. |
+| **localStorage** | Multi-project storage. Keys: `genogram-builder-projects-v1` (array of Projects), `genogram-builder-active-id-v1`, `genogram-builder-settings`, `genogram-builder-coffee-prompted-v1` (gates the 20-min coffee prompt). Legacy key `genogram-builder-data` is migrated on first load. The empty canvas itself acts as the welcome surface — there's no separate welcome modal. |
 | **JSON export format** | `{ version: 1, data: GenogramData, settings: Settings }`. The legacy bare-`GenogramData` format is still accepted on import. Importing a v1 file restores both the genogram and its design settings. |
 
 ---
@@ -101,9 +101,6 @@ src/
 │   │                                 they're never clipped by the shape boundary or by
 │   │                                 neighbouring nodes' fills.
 │   ├── ProjectManager.tsx          Modal: list/create/rename/delete genogram projects.
-│   ├── WelcomeModal.tsx            Modal: shown once on first visit (gated by localStorage key
-│   │                               `genogram-builder-welcome-seen-v1`). Brief intro + how-to +
-│   │                               mailto link for feedback.
 │   ├── SelectionToolbar.tsx        Floating toolbar above selected node(s). Sibling of
 │   │                               <ReactFlow> inside <ReactFlowProvider>; uses useNodes() +
 │   │                               useViewport() to position itself in screen space.
@@ -330,7 +327,7 @@ Keyboard shortcuts: `⌘Z` / `Ctrl+Z` (undo), `⌘⇧Z` / `Ctrl+Y` (redo). Regis
 ```
 
 - **Project badge** — click to open ProjectManager (switch/rename/create/delete projects)
-- **File ▾** — dropdown: New blank genogram, Import GEDCOM…, Import from JSON…, Export…, Backup to JSON, Start Over (red). Export… opens ExportSvgModal (title + orientation + page mode + SVG/PDF format). Export/Start Over disabled when canvas is empty. Closes on outside click.
+- **File ▾** — dropdown: New blank genogram, Import GEDCOM…, Load from Backup… (JSON), Export…, Backup to JSON, Start Over (red). Export… opens ExportSvgModal (title + orientation + page mode + SVG/PDF format). Export/Start Over disabled when canvas is empty. Closes on outside click.
 - **✦ Clean Up Layout** — shows a confirm dialog warning about lost custom arrangements, then runs `autoLayout()`. Undoable.
 - **↩ / ↪** — Undo / Redo buttons. Greyed when stack is empty.
 - **⚙** — Settings panel
@@ -348,7 +345,7 @@ Export filenames use the project name (illegal filesystem characters replaced wi
 - Saves on every state change (people, relationships, node positions).
 - **Start Over**: resets current project's canvas. Does not delete the project.
 - **Save JSON / Open JSON**: JSON import creates a new project named after the file.
-- **Import GEDCOM / Import from JSON**: parses the file, then opens `ImportTargetDialog` so the user picks "Replace current genogram" (overwrites the active project's data + settings; undoable via the regular undo stack) or "Create new genogram" (existing flow — appends a new project). Skipped only if the user cancels the dialog. GEDCOM imports run `autoLayout()` before this point.
+- **Import GEDCOM / Load from Backup**: parses the file, then opens `ImportTargetDialog` so the user picks "Replace current genogram" (overwrites the active project's data + settings; undoable via the regular undo stack) or "Create new genogram" (existing flow — appends a new project). Skipped only if the user cancels the dialog. GEDCOM imports run `autoLayout()` before this point.
 - **Export / Save JSON**: filename = project name + extension.
 
 ---

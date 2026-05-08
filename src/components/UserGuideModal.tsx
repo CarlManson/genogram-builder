@@ -144,9 +144,9 @@ export default function UserGuideModal({ onClose }: Props) {
             <ul style={s.ul}>
               <li><strong>New blank genogram</strong> — adds a fresh empty project. Rename it via the project pill next to the logo.</li>
               <li><strong>Import GEDCOM</strong> — loads a <code>.ged</code> file. Choose the focal person and the number of generations above and below, then pick whether to replace the current genogram or create a new one.</li>
-              <li><strong>Import from JSON</strong> — loads a Genogram Builder backup. You'll be asked whether to replace the current genogram or create a new one.</li>
+              <li><strong>Load from Backup</strong> — loads a Genogram Builder JSON backup. You'll be asked whether to replace the current genogram or create a new one.</li>
               <li><strong>Export…</strong> — opens an export dialog: choose SVG or PDF, set a title, pick orientation (auto / portrait / landscape), and either scale-to-fit a single A4 page or render at native size with the A4 frame as a guide showing what fits on a page.</li>
-              <li><strong>Backup to JSON</strong> — saves the current genogram to a JSON file. Round-trips losslessly; this is the file you'd <em>Import from JSON</em> later.</li>
+              <li><strong>Backup to JSON</strong> — saves the current genogram to a JSON file. Round-trips losslessly; this is the file you'd <em>Load from Backup</em> later.</li>
               <li><strong>Start Over</strong> — clears the current genogram (within a project). Undoable.</li>
             </ul>
           </Section>

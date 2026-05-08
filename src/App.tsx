@@ -22,7 +22,6 @@ import GedcomImport from './components/GedcomImport'
 import SettingsPanel from './components/SettingsPanel'
 import ProjectManager from './components/ProjectManager'
 import SelectionToolbar from './components/SelectionToolbar'
-import WelcomeModal from './components/WelcomeModal'
 import CoffeeModal from './components/CoffeeModal'
 import UserGuideModal from './components/UserGuideModal'
 import ExportSvgModal, { ExportOptions } from './components/ExportSvgModal'
@@ -56,7 +55,6 @@ const LS_LEGACY_KEY = 'genogram-builder-data'
 const LS_PROJECTS_KEY = 'genogram-builder-projects-v1'
 const LS_ACTIVE_ID_KEY = 'genogram-builder-active-id-v1'
 const LS_SETTINGS_KEY = 'genogram-builder-settings'
-const LS_WELCOME_SEEN_KEY = 'genogram-builder-welcome-seen-v1'
 const LS_COFFEE_PROMPTED_KEY = 'genogram-builder-coffee-prompted-v1'
 const COFFEE_PROMPT_DELAY_MS = 20 * 60 * 1000
 
@@ -132,15 +130,6 @@ export default function App() {
     }, COFFEE_PROMPT_DELAY_MS)
     return () => clearTimeout(timer)
   }, [])
-  const [showWelcome, setShowWelcome] = useState<boolean>(() => {
-    try { return !localStorage.getItem(LS_WELCOME_SEEN_KEY) } catch { return false }
-  })
-
-  function handleCloseWelcome() {
-    setShowWelcome(false)
-    try { localStorage.setItem(LS_WELCOME_SEEN_KEY, '1') } catch { /* ignore */ }
-  }
-
   // --- Undo / Redo ---
   const [undoStack, setUndoStack] = useState<GenogramData[]>([])
   const [redoStack, setRedoStack] = useState<GenogramData[]>([])
@@ -1054,12 +1043,37 @@ export default function App() {
         {people.length === 0 && relationships.length === 0 ? (
           <div style={empty}>
             <div style={emptyBox}>
-              <p style={emptyTitle}>Start your genogram</p>
-              <p style={emptyHint}>Import a GEDCOM file or add people manually</p>
+              <p style={emptyTitle}>Welcome to Genogram Builder</p>
+              <p style={emptyHint}>
+                A free browser-based tool for drawing genograms — family diagrams
+                that use shapes for people and lines to show their relationships.
+              </p>
+
+              {isMobile && (
+                <div style={emptyMobileNotice}>
+                  <strong>Heads up — this tool is built for desktop.</strong> You
+                  can pan and zoom on touch, but adding people, editing relationships
+                  and dragging nodes work much better with a mouse and keyboard.
+                </div>
+              )}
+
               <div style={btnGroup}>
-                <button style={btnPrimary} onClick={() => setShowGedcom(true)}>Import GEDCOM</button>
-                <button style={btn} onClick={() => setEditPerson('new')}>Add Person</button>
+                <button style={btnPrimary} onClick={() => setEditPerson('new')}>+ Add person</button>
+                <button style={btn} onClick={() => setShowGedcom(true)}>Import GEDCOM</button>
+                <button style={btn} onClick={() => jsonInputRef.current?.click()}>Load from Backup</button>
               </div>
+
+              <ul style={emptyList}>
+                <li>Double-click a person or relationship line to edit it.</li>
+                <li>Drag to reposition; everything saves automatically in your browser.</li>
+                <li>Open the User Guide (<HelpCircle size={11} style={{ verticalAlign: -1 }} />) for the full walkthrough.</li>
+              </ul>
+
+              <p style={emptyNote}>
+                I built this for myself, so it's not perfect — if you spot a bug or
+                have suggestions, please{' '}
+                <a href="mailto:carl.manson@westnet.com.au" style={emptyLink}>reach out</a>.
+              </p>
             </div>
           </div>
         ) : (
@@ -1115,7 +1129,6 @@ export default function App() {
       </div>
 
       {/* Modals */}
-      {showWelcome && <WelcomeModal onClose={handleCloseWelcome} />}
       {showCoffee && <CoffeeModal prompted={coffeeIsPrompt} onClose={() => setShowCoffee(false)} />}
       {showGuide && <UserGuideModal onClose={() => setShowGuide(false)} />}
       {showExport && (
@@ -1274,7 +1287,7 @@ function FileMenu({ onNewBlank, onImportGedcom, onOpenJson, onExportSvg, onSaveJ
         <div style={fileMenuDropdown}>
           {menuItem('new-blank', 'New blank genogram', onNewBlank, { sublabel: 'Empty canvas' })}
           {menuItem('gedcom', 'Import GEDCOM…', onImportGedcom, { sublabel: 'Replace this genogram or start a new one' })}
-          {menuItem('open-json', 'Import from JSON…', onOpenJson, { sublabel: 'Replace this genogram or start a new one' })}
+          {menuItem('open-json', 'Load from Backup…', onOpenJson, { sublabel: 'Replace this genogram or start a new one' })}
           <div style={fileMenuSep} />
           {menuItem('export-svg', 'Export…', onExportSvg, { itemDisabled: disabled, sublabel: 'SVG or PDF, with A4 frame and title' })}
           {menuItem('save-json', 'Backup to JSON', onSaveJson, { itemDisabled: disabled, sublabel: 'Save your work to a file' })}
@@ -1396,13 +1409,29 @@ const footer: React.CSSProperties = {
 }
 const empty: React.CSSProperties = {
   width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+  padding: 24, boxSizing: 'border-box',
 }
 const emptyBox: React.CSSProperties = {
-  textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12,
+  textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14,
+  maxWidth: 460,
 }
 const emptyTitle: React.CSSProperties = {
-  margin: 0, fontSize: 20, fontWeight: 600, fontFamily: 'sans-serif', color: '#1a1a1a',
+  margin: 0, fontSize: 22, fontWeight: 600, fontFamily: 'sans-serif', color: '#1a1a1a',
 }
 const emptyHint: React.CSSProperties = {
-  margin: 0, fontSize: 14, fontFamily: 'sans-serif', color: '#6b7280',
+  margin: 0, fontSize: 14, lineHeight: 1.5, fontFamily: 'sans-serif', color: '#6b7280',
 }
+const emptyMobileNotice: React.CSSProperties = {
+  background: 'rgba(252, 191, 71, 0.12)', border: '1px solid rgba(252, 191, 71, 0.4)',
+  borderRadius: 6, padding: '10px 12px', fontSize: 13, lineHeight: 1.4,
+  fontFamily: 'sans-serif', color: '#a06b00', textAlign: 'left',
+}
+const emptyList: React.CSSProperties = {
+  margin: 0, paddingLeft: 18, fontSize: 13, lineHeight: 1.6,
+  fontFamily: 'sans-serif', color: '#6b7280', textAlign: 'left',
+}
+const emptyNote: React.CSSProperties = {
+  margin: 0, fontSize: 12, lineHeight: 1.5, fontStyle: 'italic',
+  fontFamily: 'sans-serif', color: '#9ca3af',
+}
+const emptyLink: React.CSSProperties = { color: '#6d7ce5', textDecoration: 'underline' }
