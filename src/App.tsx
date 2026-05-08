@@ -25,6 +25,8 @@ import SelectionToolbar from './components/SelectionToolbar'
 import WelcomeModal from './components/WelcomeModal'
 import CoffeeModal from './components/CoffeeModal'
 import UserGuideModal from './components/UserGuideModal'
+import ExportSvgModal, { ExportOptions } from './components/ExportSvgModal'
+import ImportTargetDialog, { ImportTargetChoice } from './components/ImportTargetDialog'
 import { Coffee, HelpCircle } from 'lucide-react'
 import { useIsMobile } from './lib/useIsMobile'
 import { Person, Relationship, GenogramData, Settings, DEFAULT_SETTINGS, DEFAULT_DESIGN, RelContext, Project } from './lib/types'
@@ -104,6 +106,12 @@ export default function App() {
   const [showCoffee, setShowCoffee] = useState(false)
   const [coffeeIsPrompt, setCoffeeIsPrompt] = useState(false)
   const [showGuide, setShowGuide] = useState(false)
+  const [showExport, setShowExport] = useState(false)
+  const [pendingImport, setPendingImport] = useState<
+    | { kind: 'gedcom'; data: GenogramData }
+    | { kind: 'json'; data: GenogramData; settings?: Settings; name: string }
+    | null
+  >(null)
   const isMobile = useIsMobile()
 
   // Counter incremented whenever the canvas should re-fit (initial load,
@@ -332,10 +340,39 @@ export default function App() {
   }
 
   function loadData(data: GenogramData) {
+    setPendingImport({ kind: 'gedcom', data })
+  }
+
+  function applyImport(choice: ImportTargetChoice) {
+    const pending = pendingImport
+    if (!pending) return
+    setPendingImport(null)
+
+    if (choice === 'replace') {
+      snapshot()
+      setPeople(pending.data.people)
+      setRelationships(pending.data.relationships)
+      setSibshipOffsets(pending.data.sibshipOffsets ?? {})
+      setNodes(genogramToNodes(pending.data))
+      if (pending.kind === 'json' && pending.settings) {
+        setSettings({
+          ...DEFAULT_SETTINGS,
+          ...pending.settings,
+          design: { ...DEFAULT_DESIGN, ...(pending.settings.design ?? {}) },
+        })
+      }
+      setFitViewKey(k => k + 1)
+      return
+    }
+
+    // 'new' — append a new project, leave the active one untouched.
     const newProject: Project = {
       id: crypto.randomUUID(),
-      name: 'Imported Genogram',
-      data,
+      name: pending.kind === 'json' ? pending.name : 'Imported Genogram',
+      data: pending.data,
+      settings: pending.kind === 'json' && pending.settings
+        ? { ...DEFAULT_SETTINGS, ...pending.settings, design: { ...DEFAULT_DESIGN, ...(pending.settings.design ?? {}) } }
+        : undefined,
       lastModified: Date.now(),
     }
     const updated = [...projects, newProject]
@@ -480,10 +517,19 @@ export default function App() {
     }))
   }, [setNodes])
 
-  const onNodeDragStop: NodeMouseHandler = useCallback(() => {
+  const onNodeDragStop: NodeMouseHandler = useCallback((_e, node) => {
+    const ref = dragGroupRef.current
+    // React Flow commits the cursor's final y on mouseup via onNodesChange
+    // *after* the last onNodeDrag fires, which would otherwise unlock the y
+    // we'd been holding throughout a horizontal slide. Re-clamp it here.
+    if (ref?.shiftOnly && ref.nodeId === node.id) {
+      setNodes(ns => ns.map(n =>
+        n.id === node.id ? { ...n, position: { x: node.position.x, y: ref.startPos.y } } : n
+      ))
+    }
     dragGroupRef.current = null
     setMoveMode(false)
-  }, [])
+  }, [setNodes])
 
   function getSmartPosition(relContext: RelContext): { x: number; y: number } {
     const NW = 200
@@ -739,6 +785,19 @@ export default function App() {
   function distributeSelectedHorizontal(ids: string[]) { distributeSelected(ids, 'x') }
   function distributeSelectedVertical(ids: string[]) { distributeSelected(ids, 'y') }
 
+  function handleEncircle(ids: string[]) {
+    // Replace the inner circle with the current selection. Keeps existing
+    // shape choice; turns the circle on if it was hidden. Legacy
+    // showFocalEllipse is dropped so the new list takes precedence.
+    setSettings(prev => ({
+      ...prev,
+      innerCircleIds: [...ids],
+      showInnerCircle: true,
+      innerCircleShape: prev.innerCircleShape ?? 'ellipse',
+      showFocalEllipse: false,
+    }))
+  }
+
   function cleanUpDescendants(personId: string) {
     // Collect descendants via parent-child links.
     const descendants = new Set<string>()
@@ -828,14 +887,32 @@ export default function App() {
     return name.replace(/[/\\?%*:|"<>]/g, '-') + '.' + ext
   }
 
-  function handleExportSvg() {
+  function handleOpenExport() {
+    setShowExport(true)
+  }
+
+  async function handleRunExport(options: ExportOptions) {
     const data: GenogramData = { people, relationships, nodePositions: getCurrentPositions(), sibshipOffsets }
-    const svg = exportToSvg(data, settings)
-    const blob = new Blob([svg], { type: 'image/svg+xml' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url; a.download = projectFileName('svg'); a.click()
-    URL.revokeObjectURL(url)
+    if (options.format === 'pdf') {
+      try {
+        const { exportToPdf } = await import('./lib/exportPdf')
+        const blob = await exportToPdf(data, settings, options)
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url; a.download = projectFileName('pdf'); a.click()
+        URL.revokeObjectURL(url)
+      } catch (err) {
+        console.error('PDF export failed', err)
+        alert('PDF export failed. Try SVG instead, or check the console for details.')
+      }
+    } else {
+      const svg = exportToSvg(data, settings, options)
+      const blob = new Blob([svg], { type: 'image/svg+xml' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url; a.download = projectFileName('svg'); a.click()
+      URL.revokeObjectURL(url)
+    }
   }
 
   function handleExportJson() {
@@ -862,20 +939,7 @@ export default function App() {
         const data: GenogramData = parsed.version === 1 ? parsed.data : parsed
         const importedSettings: Settings | undefined = parsed.version === 1 ? parsed.settings : undefined
         const name = file.name.replace('.json', '')
-        const newProject: Project = {
-          id: crypto.randomUUID(),
-          name,
-          data,
-          settings: importedSettings
-            ? { ...DEFAULT_SETTINGS, ...importedSettings, design: { ...DEFAULT_DESIGN, ...(importedSettings.design ?? {}) } }
-            : undefined,
-          lastModified: Date.now(),
-        }
-        const updated = [...projects, newProject]
-        setProjects(updated)
-        setActiveProjectId(newProject.id)
-        loadProject(newProject)
-        localStorage.setItem(LS_PROJECTS_KEY, JSON.stringify(updated))
+        setPendingImport({ kind: 'json', data, settings: importedSettings, name })
       }
       catch { alert('Invalid JSON file') }
     }
@@ -907,7 +971,7 @@ export default function App() {
             onNewBlank={handleNewBlank}
             onImportGedcom={() => setShowGedcom(true)}
             onOpenJson={() => jsonInputRef.current?.click()}
-            onExportSvg={handleExportSvg}
+            onExportSvg={handleOpenExport}
             onSaveJson={handleExportJson}
             onStartOver={handleStartOver}
             disabled={people.length === 0}
@@ -1037,6 +1101,7 @@ export default function App() {
                 onAlignVertical={alignSelectedVertical}
                 onDistributeHorizontal={distributeSelectedHorizontal}
                 onDistributeVertical={distributeSelectedVertical}
+                onEncircle={handleEncircle}
               />
               <FitViewOnLoad k={fitViewKey} />
             </ReactFlowProvider>
@@ -1053,6 +1118,22 @@ export default function App() {
       {showWelcome && <WelcomeModal onClose={handleCloseWelcome} />}
       {showCoffee && <CoffeeModal prompted={coffeeIsPrompt} onClose={() => setShowCoffee(false)} />}
       {showGuide && <UserGuideModal onClose={() => setShowGuide(false)} />}
+      {showExport && (
+        <ExportSvgModal
+          defaultTitle={currentProject?.name?.trim() || 'Genogram'}
+          onExport={handleRunExport}
+          onClose={() => setShowExport(false)}
+        />
+      )}
+      {pendingImport && (
+        <ImportTargetDialog
+          sourceLabel={pendingImport.kind === 'gedcom' ? 'GEDCOM' : 'JSON backup'}
+          activeProjectName={currentProject?.name?.trim() || 'Untitled'}
+          activeHasPeople={people.length > 0}
+          onChoose={applyImport}
+          onCancel={() => setPendingImport(null)}
+        />
+      )}
       {showProjects && (
         <ProjectManager
           projects={projects}
@@ -1192,10 +1273,10 @@ function FileMenu({ onNewBlank, onImportGedcom, onOpenJson, onExportSvg, onSaveJ
       {open && (
         <div style={fileMenuDropdown}>
           {menuItem('new-blank', 'New blank genogram', onNewBlank, { sublabel: 'Empty canvas' })}
-          {menuItem('gedcom', 'Import GEDCOM…', onImportGedcom, { sublabel: 'Creates a new genogram' })}
-          {menuItem('open-json', 'Import from JSON…', onOpenJson, { sublabel: 'Restore a backup' })}
+          {menuItem('gedcom', 'Import GEDCOM…', onImportGedcom, { sublabel: 'Replace this genogram or start a new one' })}
+          {menuItem('open-json', 'Import from JSON…', onOpenJson, { sublabel: 'Replace this genogram or start a new one' })}
           <div style={fileMenuSep} />
-          {menuItem('export-svg', 'Export SVG', onExportSvg, { itemDisabled: disabled, sublabel: 'Vector image' })}
+          {menuItem('export-svg', 'Export…', onExportSvg, { itemDisabled: disabled, sublabel: 'SVG or PDF, with A4 frame and title' })}
           {menuItem('save-json', 'Backup to JSON', onSaveJson, { itemDisabled: disabled, sublabel: 'Save your work to a file' })}
           <div style={fileMenuSep} />
           {menuItem('start-over', 'Start Over', onStartOver, { danger: true, itemDisabled: disabled, sublabel: 'Clear the current genogram' })}

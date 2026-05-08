@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { Settings, DesignSettings, NameFormat, DateDisplay, Person, DEFAULT_DESIGN } from '../lib/types'
+import { Settings, DesignSettings, NameFormat, DateDisplay, Person, DEFAULT_DESIGN, InnerCircleShape } from '../lib/types'
 import { M } from '../lib/modalTheme'
+import { useModalShortcuts } from '../lib/useModalShortcuts'
 
 interface Props {
   settings: Settings
@@ -28,6 +29,8 @@ export default function SettingsPanel({ settings, people, onSave, onClose }: Pro
     const nb = [b.firstName, b.lastName].filter(Boolean).join(' ')
     return na.localeCompare(nb)
   })
+
+  useModalShortcuts({ onClose, onEnter: () => { onSave(form); onClose() } })
 
   return (
     <div style={s.overlay} onClick={e => { if (e.target === e.currentTarget) onClose() }}>
@@ -65,7 +68,7 @@ export default function SettingsPanel({ settings, people, onSave, onClose }: Pro
 
             <hr style={s.hr} />
 
-            <p style={s.sectionLabel}>Focal Person</p>
+            <p style={s.sectionLabel}>Focal person</p>
             <label style={s.label}>Focal person
               <select style={s.input} value={form.focalPersonId || ''} onChange={e => set('focalPersonId', e.target.value || undefined)}>
                 <option value="">— none —</option>
@@ -77,15 +80,66 @@ export default function SettingsPanel({ settings, people, onSave, onClose }: Pro
               </select>
             </label>
 
+            <hr style={s.hr} />
+
+            <p style={s.sectionLabel}>Inner circle</p>
+            <p style={s.hint}>
+              A blue dashed shape encloses the people you nominate as your inner
+              circle. Add people by selecting them on the canvas and clicking
+              the Encircle button in the floating toolbar.
+            </p>
+
             <label style={{ ...s.label, flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 }}>
               <input
                 type="checkbox"
-                checked={!!form.showFocalEllipse}
-                onChange={e => set('showFocalEllipse', e.target.checked)}
+                checked={form.showInnerCircle !== false}
+                onChange={e => set('showInnerCircle', e.target.checked)}
                 style={{ width: 16, height: 16 }}
               />
-              Draw ellipse around couple
+              Show inner circle
             </label>
+
+            <label style={s.label}>Shape
+              <select
+                style={s.input}
+                value={form.innerCircleShape ?? 'ellipse'}
+                onChange={e => set('innerCircleShape', e.target.value as InnerCircleShape)}
+              >
+                <option value="ellipse">Ellipse</option>
+                <option value="rounded-rect">Rounded rectangle</option>
+              </select>
+            </label>
+
+            {(() => {
+              const ids = form.innerCircleIds ?? []
+              if (ids.length === 0) {
+                return <p style={s.hint}>No-one in the inner circle yet.</p>
+              }
+              return (
+                <div style={s.chipRow}>
+                  {ids.map(id => {
+                    const p = people.find(p => p.id === id)
+                    const name = p
+                      ? ([p.firstName, p.lastName].filter(Boolean).join(' ') || 'Unknown')
+                      : 'Removed person'
+                    return (
+                      <span key={id} style={s.chip}>
+                        {name}
+                        <button
+                          style={s.chipRemove}
+                          aria-label={`Remove ${name}`}
+                          onClick={() => set('innerCircleIds', ids.filter(x => x !== id))}
+                        >×</button>
+                      </span>
+                    )
+                  })}
+                  <button
+                    style={s.clearAll}
+                    onClick={() => set('innerCircleIds', [])}
+                  >Clear all</button>
+                </div>
+              )
+            })()}
           </>
         )}
 
@@ -237,4 +291,22 @@ const s: Record<string, React.CSSProperties> = {
   rowLabel: { flex: 1 },
   colorInput: { width: 36, height: 26, padding: 0, border: `1px solid ${M.border}`, borderRadius: 4, background: 'none', cursor: 'pointer' },
   hex: { fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', fontSize: 11, color: M.textMuted, minWidth: 64, textAlign: 'right' },
+  chipRow: { display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center', marginTop: 4 },
+  chip: {
+    display: 'inline-flex', alignItems: 'center', gap: 6,
+    padding: '4px 4px 4px 10px', borderRadius: 999,
+    background: M.inputBg, border: `1px solid ${M.border}`,
+    fontSize: 12, fontFamily: 'sans-serif', color: M.text,
+  },
+  chipRemove: {
+    width: 20, height: 20, borderRadius: 999, border: 'none',
+    background: 'transparent', color: M.textSubtle, cursor: 'pointer',
+    fontSize: 14, lineHeight: 1, padding: 0,
+  },
+  clearAll: {
+    padding: '4px 10px', borderRadius: 999,
+    background: 'transparent', color: M.textSubtle,
+    border: `1px solid ${M.border}`,
+    fontSize: 12, fontFamily: 'sans-serif', cursor: 'pointer',
+  },
 }

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Person, Relationship, RelationshipType, ParentChildNature } from '../lib/types'
 import { M } from '../lib/modalTheme'
+import { useModalShortcuts } from '../lib/useModalShortcuts'
 
 interface Props {
   people: Person[]
@@ -16,6 +17,8 @@ export default function RelationshipEditor({ people, relationship, onSave, onDel
   const [type, setType] = useState<RelationshipType>(relationship?.type ?? 'married')
   const [location, setLocation] = useState(relationship?.location ?? '')
   const [nature, setNature] = useState<ParentChildNature>(relationship?.nature ?? 'biological')
+
+  useModalShortcuts({ onClose, onEnter: handleSave })
 
   function handleSave() {
     if (!sourceId || !targetId || sourceId === targetId) return

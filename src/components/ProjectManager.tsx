@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Project } from '../lib/types'
 import { M } from '../lib/modalTheme'
+import { useModalShortcuts } from '../lib/useModalShortcuts'
 
 interface Props {
   projects: Project[]
@@ -29,6 +30,11 @@ export default function ProjectManager({
     onRename(id, editName.trim() || 'Untitled Genogram')
     setEditingId(null)
   }
+
+  // Esc closes the panel. Enter is intentionally not bound globally —
+  // the per-input handlers handle Enter for create / rename, and there's
+  // no single "save" action for this modal.
+  useModalShortcuts({ onClose })
 
   return (
     <div style={s.overlay} onClick={e => { if (e.target === e.currentTarget) onClose() }}>

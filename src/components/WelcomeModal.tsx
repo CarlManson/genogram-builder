@@ -1,5 +1,6 @@
 import { M } from '../lib/modalTheme'
 import { useIsMobile } from '../lib/useIsMobile'
+import { useModalShortcuts } from '../lib/useModalShortcuts'
 
 interface Props {
   onClose: () => void
@@ -7,6 +8,7 @@ interface Props {
 
 export default function WelcomeModal({ onClose }: Props) {
   const isMobile = useIsMobile()
+  useModalShortcuts({ onClose, onEnter: onClose })
   return (
     <div style={s.overlay} onClick={e => { if (e.target === e.currentTarget) onClose() }}>
       <div style={s.panel}>

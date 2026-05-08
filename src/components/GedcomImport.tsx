@@ -2,6 +2,7 @@ import { useState, useRef } from 'react'
 import { parseGedcom, buildGenogramFromGedcom, GedcomPerson } from '../lib/gedcom'
 import { GenogramData } from '../lib/types'
 import { M } from '../lib/modalTheme'
+import { useModalShortcuts } from '../lib/useModalShortcuts'
 
 interface Props {
   onImport: (data: GenogramData) => void
@@ -53,6 +54,8 @@ export default function GedcomImport({ onImport, onClose }: Props) {
   const filtered = people.filter(p =>
     p.fullName.toLowerCase().includes(search.toLowerCase())
   )
+
+  useModalShortcuts({ onClose, onEnter: handleImport })
 
   return (
     <div style={s.overlay} onClick={e => { if (e.target === e.currentTarget) onClose() }}>

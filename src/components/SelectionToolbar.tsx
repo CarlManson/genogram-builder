@@ -3,6 +3,7 @@ import {
   Pencil,
   Trash2,
   Sparkles,
+  Lasso,
   AlignStartHorizontal,
   AlignStartVertical,
   AlignHorizontalDistributeCenter,
@@ -20,12 +21,14 @@ interface Props {
   onAlignVertical: (ids: string[]) => void
   onDistributeHorizontal: (ids: string[]) => void
   onDistributeVertical: (ids: string[]) => void
+  onEncircle: (ids: string[]) => void
 }
 
 export default function SelectionToolbar({
   onEdit, onDelete, onCleanDescendants,
   onAlignHorizontal, onAlignVertical,
   onDistributeHorizontal, onDistributeVertical,
+  onEncircle,
 }: Props) {
   const nodes = useNodes()
   const { x: vpX, y: vpY, zoom } = useViewport()
@@ -71,6 +74,9 @@ export default function SelectionToolbar({
         <>
           <ToolBtn label="Edit" onClick={() => onEdit(ids[0])}><Pencil size={16} /></ToolBtn>
           <ToolBtn label="Clean up descendants" onClick={() => onCleanDescendants(ids[0])}><Sparkles size={16} /></ToolBtn>
+          <Divider />
+          <ToolBtn label="Set as inner circle" onClick={() => onEncircle(ids)}><Lasso size={16} /></ToolBtn>
+          <Divider />
           <ToolBtn label="Delete" danger onClick={() => onDelete(ids)}><Trash2 size={16} /></ToolBtn>
         </>
       ) : (
@@ -84,6 +90,8 @@ export default function SelectionToolbar({
               <ToolBtn label="Distribute vertically (even gaps top-to-bottom)" onClick={() => onDistributeVertical(ids)}><AlignVerticalDistributeCenter size={16} /></ToolBtn>
             </>
           )}
+          <Divider />
+          <ToolBtn label={`Set ${selected.length} as inner circle`} onClick={() => onEncircle(ids)}><Lasso size={16} /></ToolBtn>
           <Divider />
           <ToolBtn label={`Delete ${selected.length}`} danger onClick={() => onDelete(ids)}><Trash2 size={16} /></ToolBtn>
         </>

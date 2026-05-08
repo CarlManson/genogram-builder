@@ -57,11 +57,22 @@ export const OUTLINE_COLORS: readonly string[] = [
   '#2563eb', '#4f46e5', '#9333ea', '#db2777',
 ]
 
+export type InnerCircleShape = 'ellipse' | 'rounded-rect'
+
 export interface Settings {
   nameFormat: NameFormat
   dateDisplay: DateDisplay
   focalPersonId?: string
+  // Legacy: if `showFocalEllipse + focalPersonId` is set without
+  // `innerCircleIds`, the renderer treats it as [focal, first spouse] so old
+  // projects keep their ellipse. New work writes innerCircleIds directly.
   showFocalEllipse?: boolean
+  // Inner circle: a free-form list of people the user wants enclosed by an
+  // ellipse / rounded rectangle. Populated by the SelectionToolbar's Encircle
+  // button or the Settings panel chip list.
+  innerCircleIds?: string[]
+  showInnerCircle?: boolean
+  innerCircleShape?: InnerCircleShape
   design: DesignSettings
 }
 
@@ -69,6 +80,9 @@ export const DEFAULT_SETTINGS: Settings = {
   nameFormat: 'birth',
   dateDisplay: 'year',
   showFocalEllipse: false,
+  innerCircleIds: [],
+  showInnerCircle: true,
+  innerCircleShape: 'ellipse',
   design: DEFAULT_DESIGN,
 }
 

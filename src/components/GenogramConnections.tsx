@@ -3,6 +3,7 @@ import { useNodes, useViewport } from '@xyflow/react'
 import { Person, Relationship } from '../lib/types'
 import { buildFamilies } from '../lib/families'
 import { useSettings } from '../lib/SettingsContext'
+import { resolveInnerCircle } from '../lib/innerCircle'
 
 const NW = 80
 const NH = 80
@@ -135,47 +136,45 @@ export default function GenogramConnections({ relationships, sibshipOffsets, onC
   // Drag handles rendered on top of everything else
   const handles: React.ReactNode[] = []
 
-  // --- Focal Ellipse ---
-  if (settings.showFocalEllipse && settings.focalPersonId) {
-    const p1Id = settings.focalPersonId
-    const p1Pos = posMap.get(p1Id)
-    if (p1Pos) {
-      const rel = relationships.find(r => r.type !== 'parent-child' && (r.sourceId === p1Id || r.targetId === p1Id))
-      const p2Id = rel ? (rel.sourceId === p1Id ? rel.targetId : rel.sourceId) : undefined
-      const p2Pos = p2Id ? posMap.get(p2Id) : undefined
-
-      let bounds: { minX: number; minY: number; maxX: number; maxY: number }
-      if (p2Pos) {
-        bounds = {
-          minX: Math.min(p1Pos.x, p2Pos.x),
-          minY: Math.min(p1Pos.y, p2Pos.y),
-          maxX: Math.max(p1Pos.x, p2Pos.x) + NW,
-          maxY: Math.max(p1Pos.y, p2Pos.y) + NH,
-        }
-      } else {
-        bounds = {
-          minX: p1Pos.x,
-          minY: p1Pos.y,
-          maxX: p1Pos.x + NW,
-          maxY: p1Pos.y + NH,
-        }
-      }
+  // --- Inner Circle ---
+  const inner = resolveInnerCircle(settings, relationships)
+  if (inner) {
+    const positions = inner.ids
+      .map(id => posMap.get(id))
+      .filter((p): p is { x: number; y: number } => !!p)
+    if (positions.length > 0) {
+      const minX = Math.min(...positions.map(p => p.x))
+      const minY = Math.min(...positions.map(p => p.y))
+      const maxX = Math.max(...positions.map(p => p.x + NW))
+      const maxY = Math.max(...positions.map(p => p.y + NH))
 
       const marginX = 40
       const marginY = 60
-      const cx = (bounds.minX + bounds.maxX) / 2
-      const cy = (bounds.minY + bounds.maxY) / 2
-      const rx = (bounds.maxX - bounds.minX) / 2 + marginX
-      const ry = (bounds.maxY - bounds.minY) / 2 + marginY
+      const cx = (minX + maxX) / 2
+      const cy = (minY + maxY) / 2
+      const rx = (maxX - minX) / 2 + marginX
+      const ry = (maxY - minY) / 2 + marginY
 
-      visibles.push(
-        <ellipse
-          key="focal-ellipse"
-          cx={cx} cy={cy} rx={rx} ry={ry}
-          fill="none" stroke="#3b82f6" strokeWidth={2} strokeDasharray="6,4"
-          style={{ pointerEvents: 'none' }}
-        />
-      )
+      if (inner.shape === 'rounded-rect') {
+        visibles.push(
+          <rect
+            key="inner-circle"
+            x={cx - rx} y={cy - ry} width={rx * 2} height={ry * 2}
+            rx={28} ry={28}
+            fill="none" stroke="#3b82f6" strokeWidth={2} strokeDasharray="6,4"
+            style={{ pointerEvents: 'none' }}
+          />
+        )
+      } else {
+        visibles.push(
+          <ellipse
+            key="inner-circle"
+            cx={cx} cy={cy} rx={rx} ry={ry}
+            fill="none" stroke="#3b82f6" strokeWidth={2} strokeDasharray="6,4"
+            style={{ pointerEvents: 'none' }}
+          />
+        )
+      }
     }
   }
 

@@ -1,10 +1,12 @@
 import { M } from '../lib/modalTheme'
+import { useModalShortcuts } from '../lib/useModalShortcuts'
 
 interface Props {
   onClose: () => void
 }
 
 export default function UserGuideModal({ onClose }: Props) {
+  useModalShortcuts({ onClose, onEnter: onClose })
   return (
     <div style={s.overlay} onClick={e => { if (e.target === e.currentTarget) onClose() }}>
       <div style={s.panel}>
@@ -141,9 +143,9 @@ export default function UserGuideModal({ onClose }: Props) {
           <Section title="Files">
             <ul style={s.ul}>
               <li><strong>New blank genogram</strong> — adds a fresh empty project. Rename it via the project pill next to the logo.</li>
-              <li><strong>Import GEDCOM</strong> — creates a new genogram from a <code>.ged</code> file. Choose the focal person and the number of generations above and below.</li>
-              <li><strong>Import from JSON</strong> — restores a Genogram Builder backup as a new project.</li>
-              <li><strong>Export SVG</strong> — clean vector image suitable for printing or embedding.</li>
+              <li><strong>Import GEDCOM</strong> — loads a <code>.ged</code> file. Choose the focal person and the number of generations above and below, then pick whether to replace the current genogram or create a new one.</li>
+              <li><strong>Import from JSON</strong> — loads a Genogram Builder backup. You'll be asked whether to replace the current genogram or create a new one.</li>
+              <li><strong>Export…</strong> — opens an export dialog: choose SVG or PDF, set a title, pick orientation (auto / portrait / landscape), and either scale-to-fit a single A4 page or render at native size with the A4 frame as a guide showing what fits on a page.</li>
               <li><strong>Backup to JSON</strong> — saves the current genogram to a JSON file. Round-trips losslessly; this is the file you'd <em>Import from JSON</em> later.</li>
               <li><strong>Start Over</strong> — clears the current genogram (within a project). Undoable.</li>
             </ul>
@@ -162,7 +164,7 @@ export default function UserGuideModal({ onClose }: Props) {
               The gear icon opens a tabbed Settings panel.
             </p>
             <ul style={s.ul}>
-              <li><strong>General</strong> — name format (birth / married / first only), date display (year / full date / age), focal person and the optional dashed ellipse around the focal couple.</li>
+              <li><strong>General</strong> — name format (birth / married / first only), date display (year / full date / age), focal person, and the <em>inner circle</em>: a blue dashed shape (ellipse or rounded rectangle) drawn around any group of people you nominate. To populate it, multi-select people on the canvas and click the lasso button in the floating toolbar; the Settings panel lets you toggle it, switch shape, or remove individual members.</li>
               <li><strong>Design</strong> — font size, every text colour (name, date, occupation, cause of death, location), shape fill / outline / deceased fill / deceased ✕ colours, and couple- &amp; parent-child line colour and thickness. The "Crop names to shape" toggle moves names back inside the shape if you prefer the boxed look.</li>
             </ul>
           </Section>

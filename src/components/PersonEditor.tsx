@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { Person, Sex, DateDisplay, Settings, DEFAULT_SETTINGS, RelContext, RelContextType, OUTLINE_COLORS } from '../lib/types'
 import { M } from '../lib/modalTheme'
+import { useModalShortcuts } from '../lib/useModalShortcuts'
 
 const DATE_DISPLAY_LABELS: Record<DateDisplay, string> = {
   year: 'Year',
@@ -131,6 +132,8 @@ export default function PersonEditor({
     onSave(form, relContext, parents)
     onClose()
   }
+
+  useModalShortcuts({ onClose, onEnter: handleSave })
 
   function handleSaveAndAddNext(kind: AddNextKind) {
     if (!onSaveAndAddNext) return

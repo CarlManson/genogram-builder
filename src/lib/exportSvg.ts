@@ -1,12 +1,22 @@
 import { Person, GenogramData, Settings, DEFAULT_SETTINGS } from './types'
 import { buildFamilies } from './families'
 import { personDateLabel } from './dateUtils'
+import { resolveInnerCircle } from './innerCircle'
+import type { ExportOptions } from '../components/ExportSvgModal'
 
 const NODE_SIZE = 80
 const HALF = NODE_SIZE / 2
 const PAD = 50
 const SIBSHIP_GAP = 28
 const TWIN_APEX_DROP = 12
+
+// A4 at 96 DPI. The outer <svg> also carries width/height in mm for fit mode
+// so print apps render the page at exact physical size.
+const A4_PORTRAIT = { w: 794, h: 1123 }
+const A4_LANDSCAPE = { w: 1123, h: 794 }
+const PAGE_MARGIN = 40         // surrounds the A4 frame in native mode
+const FIT_CONTENT_MARGIN = 16  // ~4mm — minimal padding around the genogram in fit mode
+const TITLE_BAND = 56          // height reserved at top of the page when a title is set
 
 function escapeXml(str: string): string {
   return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
@@ -144,40 +154,30 @@ function renderFamilies(
   }
   const lines: string[] = []
 
-  // --- Focal Ellipse ---
-  if (settings.showFocalEllipse && settings.focalPersonId) {
-    const p1Id = settings.focalPersonId
-    const p1Pos = positions[p1Id]
-    if (p1Pos) {
-      const rel = data.relationships.find(r => r.type !== 'parent-child' && (r.sourceId === p1Id || r.targetId === p1Id))
-      const p2Id = rel ? (rel.sourceId === p1Id ? rel.targetId : rel.sourceId) : undefined
-      const p2Pos = p2Id ? positions[p2Id] : undefined
-
-      let bounds: { minX: number; minY: number; maxX: number; maxY: number }
-      if (p2Pos) {
-        bounds = {
-          minX: Math.min(p1Pos.x, p2Pos.x),
-          minY: Math.min(p1Pos.y, p2Pos.y),
-          maxX: Math.max(p1Pos.x, p2Pos.x) + NODE_SIZE,
-          maxY: Math.max(p1Pos.y, p2Pos.y) + NODE_SIZE,
-        }
-      } else {
-        bounds = {
-          minX: p1Pos.x,
-          minY: p1Pos.y,
-          maxX: p1Pos.x + NODE_SIZE,
-          maxY: p1Pos.y + NODE_SIZE,
-        }
-      }
+  // --- Inner Circle ---
+  const inner = resolveInnerCircle(settings, data.relationships)
+  if (inner) {
+    const positionsList = inner.ids
+      .map(id => positions[id])
+      .filter((p): p is { x: number; y: number } => !!p)
+    if (positionsList.length > 0) {
+      const minX = Math.min(...positionsList.map(p => p.x))
+      const minY = Math.min(...positionsList.map(p => p.y))
+      const maxX = Math.max(...positionsList.map(p => p.x + NODE_SIZE))
+      const maxY = Math.max(...positionsList.map(p => p.y + NODE_SIZE))
 
       const marginX = 40
       const marginY = 60
-      const cx = (bounds.minX + bounds.maxX) / 2
-      const cy = (bounds.minY + bounds.maxY) / 2
-      const rx = (bounds.maxX - bounds.minX) / 2 + marginX
-      const ry = (bounds.maxY - bounds.minY) / 2 + marginY
+      const cx = (minX + maxX) / 2
+      const cy = (minY + maxY) / 2
+      const rx = (maxX - minX) / 2 + marginX
+      const ry = (maxY - minY) / 2 + marginY
 
-      lines.push(`<ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="none" stroke="#3b82f6" stroke-width="2" stroke-dasharray="6,4"/>`)
+      if (inner.shape === 'rounded-rect') {
+        lines.push(`<rect x="${cx - rx}" y="${cy - ry}" width="${rx * 2}" height="${ry * 2}" rx="28" ry="28" fill="none" stroke="#3b82f6" stroke-width="2" stroke-dasharray="6,4"/>`)
+      } else {
+        lines.push(`<ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="none" stroke="#3b82f6" stroke-width="2" stroke-dasharray="6,4"/>`)
+      }
     }
   }
 
@@ -331,7 +331,11 @@ function renderFamilies(
   return lines.join('\n')
 }
 
-export function exportToSvg(data: GenogramData, settings: Settings = DEFAULT_SETTINGS): string {
+export function exportToSvg(
+  data: GenogramData,
+  settings: Settings = DEFAULT_SETTINGS,
+  options: ExportOptions = { title: '', orientation: 'auto', mode: 'fit', format: 'svg' }
+): string {
   const { people, nodePositions } = data
 
   if (people.length === 0) return '<svg xmlns="http://www.w3.org/2000/svg"/>'
@@ -348,8 +352,8 @@ export function exportToSvg(data: GenogramData, settings: Settings = DEFAULT_SET
   const maxX = Math.max(...xs) + NODE_SIZE + PAD
   const maxY = Math.max(...ys) + NODE_SIZE + labelRoom + PAD
 
-  const width = maxX - minX
-  const height = maxY - minY
+  const gW = maxX - minX
+  const gH = maxY - minY
 
   const peopleSvg = people
     .map(p => {
@@ -370,10 +374,71 @@ export function exportToSvg(data: GenogramData, settings: Settings = DEFAULT_SET
     settings
   )
 
+  // Pick page orientation. Auto = follow the genogram's aspect ratio.
+  const useLandscape = options.orientation === 'landscape'
+    || (options.orientation === 'auto' && gW > gH)
+  const pageW = useLandscape ? A4_LANDSCAPE.w : A4_PORTRAIT.w
+  const pageH = useLandscape ? A4_LANDSCAPE.h : A4_PORTRAIT.h
+
+  const titleText = (options.title || '').trim()
+  const titleH = titleText ? TITLE_BAND : 0
+
+  let svgW: number
+  let svgH: number
+  let genoTransform: string
+  let frameDash = ''
+  // Physical size attrs lock printable A4 when the SVG is exactly page-sized.
+  let physAttrs = ''
+
+  if (options.mode === 'fit') {
+    svgW = pageW
+    svgH = pageH
+    const m = FIT_CONTENT_MARGIN
+    const contentW = pageW - 2 * m
+    const contentH = pageH - 2 * m - titleH
+    const scale = Math.min(contentW / gW, contentH / gH)
+    const scaledW = gW * scale
+    const scaledH = gH * scale
+    const offsetX = m + (contentW - scaledW) / 2
+    const offsetY = m + titleH + (contentH - scaledH) / 2
+    genoTransform = `translate(${offsetX} ${offsetY}) scale(${scale})`
+    physAttrs = useLandscape
+      ? ' width="297mm" height="210mm"'
+      : ' width="210mm" height="297mm"'
+  } else {
+    // Native size: render genogram at full size, overlay an A4 frame as a guide
+    // showing what would actually fit on a single printed page.
+    const genoX = PAGE_MARGIN
+    const genoY = PAGE_MARGIN + titleH
+    svgW = Math.max(pageW, gW + 2 * PAGE_MARGIN)
+    svgH = Math.max(pageH, gH + 2 * PAGE_MARGIN + titleH)
+    genoTransform = `translate(${genoX} ${genoY})`
+    frameDash = ' stroke-dasharray="6,4"'
+    physAttrs = ` width="${svgW}" height="${svgH}"`
+  }
+
+  const topMargin = options.mode === 'fit' ? FIT_CONTENT_MARGIN : PAGE_MARGIN
+  const titleSvg = titleText
+    ? `<text x="${pageW / 2}" y="${topMargin + titleH / 2}" text-anchor="middle" dominant-baseline="middle" font-family="sans-serif" font-size="22" font-weight="bold" fill="#1a1a1a">${escapeXml(titleText)}</text>`
+    : ''
+
+  // Generation timestamp, bottom-right of the A4 page frame. PDF only — the
+  // SVG export is meant to be evergreen.
+  let stampSvg = ''
+  if (options.format === 'pdf') {
+    const stamp = `Generated ${new Date().toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' })}`
+    stampSvg = `<text x="${pageW - 12}" y="${pageH - 12}" text-anchor="end" font-family="sans-serif" font-size="9" font-style="italic" fill="#888">${escapeXml(stamp)}</text>`
+  }
+
   return `<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+<svg xmlns="http://www.w3.org/2000/svg"${physAttrs} viewBox="0 0 ${svgW} ${svgH}">
   <rect width="100%" height="100%" fill="#fafaf9"/>
-  <g id="relationships">${relSvg}</g>
-  <g id="people">${peopleSvg}</g>
+  <rect x="0" y="0" width="${pageW}" height="${pageH}" fill="#ffffff" stroke="#999" stroke-width="1"${frameDash}/>
+  ${titleSvg}
+  <g transform="${genoTransform}">
+    <g id="relationships">${relSvg}</g>
+    <g id="people">${peopleSvg}</g>
+  </g>
+  ${stampSvg}
 </svg>`
 }

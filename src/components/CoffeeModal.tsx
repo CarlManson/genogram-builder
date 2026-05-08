@@ -1,9 +1,12 @@
+import { useModalShortcuts } from '../lib/useModalShortcuts'
+
 interface Props {
   onClose: () => void
   prompted?: boolean
 }
 
 export default function CoffeeModal({ onClose, prompted = false }: Props) {
+  useModalShortcuts({ onClose })
   const title = prompted ? 'Enjoying the Genogram Builder?' : 'Buy me a coffee'
   const body = prompted
     ? 'If it\'s been useful, consider shouting me a coffee — it helps keep the lights on and the coffee flowing.'
