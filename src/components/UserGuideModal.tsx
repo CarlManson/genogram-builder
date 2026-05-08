@@ -16,16 +16,6 @@ export default function UserGuideModal({ onClose }: Props) {
         </div>
 
         <div style={s.body}>
-          <Section title="What is a genogram?">
-            <p style={s.p}>
-              A genogram is a family diagram used in counselling, social work and
-              family-history research. People are drawn as shapes (square = male,
-              circle = female, triangle = unknown, diamond = other) and connected
-              with lines that show marriages, partnerships and parent-child links.
-              A filled shape with an X means the person is deceased.
-            </p>
-          </Section>
-
           <Section title="Getting started">
             <ul style={s.ul}>
               <li>Click <strong>+ Person</strong> to add your first family member, or use <strong>File ▸ Import GEDCOM…</strong> to load an existing family tree.</li>

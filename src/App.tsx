@@ -1043,31 +1043,53 @@ export default function App() {
         {people.length === 0 && relationships.length === 0 ? (
           <div style={empty}>
             <div style={emptyBox}>
-              <p style={emptyTitle}>Welcome to Genogram Builder</p>
-              <p style={emptyHint}>
-                A free browser-based tool for drawing genograms — family diagrams
-                that use shapes for people and lines to show their relationships.
-              </p>
+              <header style={emptyHeader}>
+                <p style={emptyTitle}>Welcome to Genogram Builder</p>
+                <p style={emptyTagline}>A free browser-based tool for drawing genograms.</p>
+              </header>
 
-              {isMobile && (
-                <div style={emptyMobileNotice}>
-                  <strong>Heads up — this tool is built for desktop.</strong> You
-                  can pan and zoom on touch, but adding people, editing relationships
-                  and dragging nodes work much better with a mouse and keyboard.
+              <section style={emptySection}>
+                <h2 style={emptySectionHeading}>What is a genogram?</h2>
+                <p style={emptyHint}>
+                  A family diagram used in counselling, social work, and family-history
+                  research.
+                </p>
+                <p style={emptyHint}>
+                  People are drawn as shapes — <strong>square</strong> for male,{' '}
+                  <strong>circle</strong> for female, <strong>triangle</strong> for
+                  unknown, <strong>diamond</strong> for other.
+                </p>
+                <p style={emptyHint}>
+                  Lines between shapes show marriages, partnerships, and parent-child
+                  links. A filled shape with an <strong>×</strong> means that person
+                  has died.
+                </p>
+              </section>
+
+              <section style={emptySection}>
+                <h2 style={emptySectionHeading}>Get started</h2>
+
+                {isMobile && (
+                  <div style={emptyMobileNotice}>
+                    <strong>Heads up — this tool is built for desktop.</strong> You
+                    can pan and zoom on touch, but adding people, editing
+                    relationships and dragging nodes work much better with a mouse
+                    and keyboard.
+                  </div>
+                )}
+
+                <div style={btnGroup}>
+                  <button style={btnPrimary} onClick={() => setEditPerson('new')}>+ Add person</button>
+                  <button style={btn} onClick={() => setShowGedcom(true)}>Import GEDCOM</button>
+                  <button style={btn} onClick={() => jsonInputRef.current?.click()}>Load from Backup</button>
                 </div>
-              )}
 
-              <div style={btnGroup}>
-                <button style={btnPrimary} onClick={() => setEditPerson('new')}>+ Add person</button>
-                <button style={btn} onClick={() => setShowGedcom(true)}>Import GEDCOM</button>
-                <button style={btn} onClick={() => jsonInputRef.current?.click()}>Load from Backup</button>
-              </div>
-
-              <ul style={emptyList}>
-                <li>Double-click a person or relationship line to edit it.</li>
-                <li>Drag to reposition; everything saves automatically in your browser.</li>
-                <li>Open the User Guide (<HelpCircle size={11} style={{ verticalAlign: -1 }} />) for the full walkthrough.</li>
-              </ul>
+                <ul style={emptyList}>
+                  <li>Double-click a person or relationship line to edit it.</li>
+                  <li>Drag to reposition; everything saves automatically in your browser.</li>
+                  <li>Open the User Guide (<HelpCircle size={11} style={{ verticalAlign: -1 }} />) for the full walkthrough.</li>
+                </ul>
+              </section>
 
               <p style={emptyNote}>
                 I built this for myself, so it's not perfect — if you spot a bug or
@@ -1409,17 +1431,31 @@ const footer: React.CSSProperties = {
 }
 const empty: React.CSSProperties = {
   width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-  padding: 24, boxSizing: 'border-box',
+  padding: 24, boxSizing: 'border-box', overflowY: 'auto',
 }
 const emptyBox: React.CSSProperties = {
-  textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14,
-  maxWidth: 460,
+  textAlign: 'left', display: 'flex', flexDirection: 'column', gap: 18,
+  maxWidth: 480, width: '100%',
+}
+const emptyHeader: React.CSSProperties = {
+  display: 'flex', flexDirection: 'column', gap: 4, textAlign: 'center',
+}
+const emptySection: React.CSSProperties = {
+  display: 'flex', flexDirection: 'column', gap: 8,
+  paddingTop: 14, borderTop: '1px solid #e5e7eb',
 }
 const emptyTitle: React.CSSProperties = {
   margin: 0, fontSize: 22, fontWeight: 600, fontFamily: 'sans-serif', color: '#1a1a1a',
 }
+const emptyTagline: React.CSSProperties = {
+  margin: 0, fontSize: 15, lineHeight: 1.4, fontFamily: 'sans-serif', color: '#6b7280',
+}
+const emptySectionHeading: React.CSSProperties = {
+  margin: 0, fontSize: 13, fontWeight: 600, fontFamily: 'sans-serif',
+  color: '#374151', textTransform: 'uppercase', letterSpacing: '0.05em',
+}
 const emptyHint: React.CSSProperties = {
-  margin: 0, fontSize: 14, lineHeight: 1.5, fontFamily: 'sans-serif', color: '#6b7280',
+  margin: 0, fontSize: 14, lineHeight: 1.55, fontFamily: 'sans-serif', color: '#4b5563',
 }
 const emptyMobileNotice: React.CSSProperties = {
   background: 'rgba(252, 191, 71, 0.12)', border: '1px solid rgba(252, 191, 71, 0.4)',
@@ -1427,11 +1463,11 @@ const emptyMobileNotice: React.CSSProperties = {
   fontFamily: 'sans-serif', color: '#a06b00', textAlign: 'left',
 }
 const emptyList: React.CSSProperties = {
-  margin: 0, paddingLeft: 18, fontSize: 13, lineHeight: 1.6,
-  fontFamily: 'sans-serif', color: '#6b7280', textAlign: 'left',
+  margin: '4px 0 0', paddingLeft: 18, fontSize: 13, lineHeight: 1.6,
+  fontFamily: 'sans-serif', color: '#6b7280',
 }
 const emptyNote: React.CSSProperties = {
   margin: 0, fontSize: 12, lineHeight: 1.5, fontStyle: 'italic',
-  fontFamily: 'sans-serif', color: '#9ca3af',
+  fontFamily: 'sans-serif', color: '#9ca3af', textAlign: 'center',
 }
 const emptyLink: React.CSSProperties = { color: '#6d7ce5', textDecoration: 'underline' }
